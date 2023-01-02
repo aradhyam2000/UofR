@@ -1,0 +1,765 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+---
+title: "DSCC/CSC/STAT 462 Assignment 3 - Aradhya Mathur"
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+subtitle: Due October 20, 2022 by 11:59 p.m.
+fontsize: 12pt
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T, eval=T,tidy=TRUE, tidy.opts=list(width.cutoff=60))
+```
+  
+\vspace{5pt}
+Please complete this assignment using `RMarkdown`, and submit the knitted PDF. 
+*For all hypothesis tests, state the hypotheses, report the test statistic and
+p-value, and comment on the results in the context of the problem.* 
+\vspace{5pt}
+
+In order to run hypothesis tests and construct confidence intervals, you may 
+find the `z.test` and/or `t.test` functions in `R` to be useful. For 
+documentation, run `?z.test` and/or `?t.test` in the console.
+
+1. Recently there has been much concern regarding fatal police shootings,
+particularly in relation to a victim's race (with "victim" being used generally
+to describe the person who was fatally shot). Since the start of 2015, the
+Washington Post has been collecting data on every fatal shooting in America by 
+a police office who was on duty. A subset of that data is presented in the
+dataset "shootings.csv."
+   
+```{r}
+# Reading Dataset
+shoot <-  read.csv('shootings.csv')
+head(shoot)
+
+```
+
+```{r}
+#Length of Dataset
+len <- nrow(shoot)
+len
+```
+
+ a. Construct a two-sided 85% confidence interval "by-hand" (i.e. do not use the
+ `t.test()` function, but still use `R`) on the mean age of victims. 
+ Interpret the result.
+ 
+
+
+```{r}
+#Finding mean, sd 
+age = shoot$age
+mean_age = mean(shoot$age)
+sd_age =  sd(shoot$age)
+mean_age
+sd_age
+```
+
+
+```{r}
+#Finding confidence interval
+y= qt(0.925,df = 179)
+y
+ci = y*sd_age/sqrt(len)
+ci
+l_ci = mean_age - ci
+u_ci = mean_age + ci
+print(paste( "(" ,l_ci ,"," , u_ci, ")", "is confidence interval"))
+```
+ ( 40.1864919311615 , 43.269063624394 ) is confidence interval
+    
+```{r}
+age
+#t.test(age, y = NULL, alternative = c("two.sided", "less", "greater"),mu = 40,
+#paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+    
+    
+    
+    b. A recent census study indicates that the average age of Americans is 40
+    years old. Conduct a hypothesis test "by-hand" (i.e. do not use the `t.test()` 
+    function, but still use `R`) at the $\alpha=0.05$ significance level to see
+    if the average age of victims is significantly different from 40 years old.
+    
+     H0: Average age of victim = 40
+     H1: Average age of victim not equal to 40
+    
+    
+```{r}
+#Hypothesis Testing
+alpha = 0.05
+mean = 40
+t = ((mean_age - mean)*(sqrt(len)))/sd_age
+t
+p_value_shoot=2*(1-pt(t,len-1))
+p_value_shoot
+
+```
+    Answer) 
+    P value is 0.1068496
+    P Value > Alpha
+    We failed to reject null hypothesis
+    
+    There is sufficient evidence to conclude that average age of victim
+    is not significantly different from 40 years old.
+    
+    c. At the $\alpha=0.01$ significance level, test "by-hand" (i.e. do not use
+    the `t.test()` function, but still use `R`) whether the average age of 
+    minority victims is different than the average age of non-minority victims. 
+    Assume equal variances.  
+    \vspace{5pt}
+    
+     H0: Average age minority = average age of non minority victims
+     H1: Average age minority not equal to average age of non minority victims
+    
+```{r}
+# Assuming equal variances
+minority <- shoot[shoot$minority=='yes', ]
+mean_minority = mean(minority$age)
+sd_minority = sd(minority$age)
+mean_minority
+sd_minority
+smin = sd_minority^2
+lenmin = nrow(minority)
+
+nonminority <- shoot[shoot$minority=='no', ]
+mean_nonminority = mean(nonminority$age)
+sd_nonminority = sd(nonminority$age)
+mean_nonminority
+sd_nonminority
+snonmin = sd_nonminority^2
+lennonmin = nrow(nonminority)
+
+numer = (lenmin-1)*smin + (lennonmin-1)*snonmin
+denom = (lenmin-1) +(lennonmin-1)
+sp2 = numer/denom
+tnum = (mean_minority - mean_nonminority)
+tdeno = sqrt(sp2*(1/lenmin + 1/lennonmin))
+teq = tnum/tdeno
+teq
+
+
+df = lennonmin+lenmin-2
+p_value=2*(pt(teq, df))
+p_value
+```
+    Answer) 
+    P Value is 0.00440256
+    P Value < Alpha
+    We reject null hypothesis
+    There is sufficient evidence to conclude that Average age of minority is not
+    equal to average age of non-minority.
+    
+2. In the dataset named "blackfriday.csv," there is information relating to the
+amount of money that a sample of $n=31$ consumers spent shopping on Black Friday
+in 2017. 
+    a. A company is interested in determining an upper-bound on the mean amount 
+    of money spent on Black Friday in order to determine maximum effects on the 
+    economy. Construct a one-sided upper-bound 99% lower confidence interval 
+    "by-hand" (i.e. do not use the `t.test()` function, but still use `R`) for
+    the mean amount of money spent on Black Friday. Interpret the results.
+    
+```{r}
+#Reading database
+bf <-  read.csv('blackfriday.csv')
+amountbf = bf$Amount
+mean_bf = mean(bf$Amount)
+sd_bf =  sd(bf$Amount)
+mean_bf
+sd_bf
+lenbf <- nrow(bf)
+lenbf
+```
+   
+```{r}
+#One-sided upper-bound 99% lower confidence interval
+y= qt(0.99,lenbf-1)
+y
+ci_bf = y*sd_bf/sqrt(lenbf)
+ci_bf
+up_bf = mean_bf+ci_bf
+up_bf
+```
+   One-sided upper-bound 99% lower confidence interval is (-infinity,13717.99)
+   
+```{r}
+#t.test(amountbf, y = NULL, alternative = c("two.sided", "less", "greater"),
+#mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.99)
+```
+   
+    
+    b. Suppose that in 2018, the average amount spent shopping on Black Friday 
+    was \$12000. Based on your sample, is there evidence to conclude that the
+    mean amount spent shopping on Black Friday is 2017 is less than \$12000? 
+    Conduct an appropriate hypothesis test "by-hand" (i.e. do not use the 
+    `t.test()` function, but still use `R`) at the $\alpha=0.05$ significance level.  
+    \vspace{5pt}
+    
+    Answer)
+     H0: Average amount spent shopping on Black Friday >= 12000
+     H1: Average amount spent shopping on Black Friday < 12000
+     
+```{r}
+#Testing
+alpha = 0.05
+mean2 = 12000
+tbf = ((mean_bf - mean2)*(sqrt(lenbf)))/sd_bf
+tbf
+pt= pt(tbf,lenbf-1)
+pt
+```
+    P Value is 0.2003949
+    P Value is > Alpha
+    We failed to reject null hypothesis
+    There is sufficient evidence to conclude that average amount spent shopping
+    on Black Friday > = 12000
+    
+
+3. The Duke Chronicle collected data on all 1739 students listed in the Class 
+of 2018's "Freshmen Picture Book." In particular, the Duke Chronicle examined 
+hometowns, details about the students' high schools, whether they won a merit 
+scholarship, and their sports team involvement. Ultimately, the goal was to
+determine trends between those who do and do not join Greek life at the university.
+A subset of this data is contained in the file named "greek.csv." The variable
+`greek` is an indicator that equals 1 if the student is involved in Greek life 
+and 0 otherwise. The variable `hstuition` gives the amount of money spent on 
+the student's high school tuition. 
+
+```{r}
+# Read Dataset
+greek <-  read.csv('greek.csv.')
+head(greek)
+
+```
+
+
+```{r}
+# Find mean, standard  deviation of money column and length of dataset
+mean_greek_money = mean(greek$hstuition)
+sd_greek_money =  sd(greek$hstuition)
+mean_greek_money
+sd_greek_money
+lengreek <- nrow(greek)
+lengreek
+```
+
+    a. At the $\alpha=0.1$ significance level, test whether the average high
+    school tuition for a student who does not partake in Greek life is less than
+    the average high school tuition for a student who does partake in Greek life.
+    Assume unequal variances.
+    
+    Answer)
+    
+    H0: Average high school tuition for a student who does not partake in Greek
+    >= average high school tuition for a student who does partake in Greek life.
+    H1: Average high school tuition for a student who does not partake in Greek
+    < average high school tuition for a student who does partake in Greek life
+    
+```{r}
+#Testing
+greek_0 <- greek[greek$greek=='0', ]
+greek_1 <- greek[greek$greek=='1', ]
+
+mean_0 = mean(greek_0$hstuition)
+mean_0
+sd_0 = sd(greek_0$hstuition)
+sd_0
+
+mean_1 = mean(greek_1$hstuition)
+mean_1
+sd_1 = sd(greek_1$hstuition) 
+sd_1
+
+len0 <- nrow(greek_0)
+len0
+len1 <- nrow(greek_1)
+len1
+
+t1 = (mean_0 - mean_1)/(sqrt(((sd_0^2)/len0)+((sd_1^2)/len1)))
+t1
+
+numerator = (((sd_0^2)/len0)+((sd_1^2)/len1))^2
+numerator
+denominator = ((((sd_0^2)/len0)^2)/(len0-1) + (((sd_1^2)/len1)^2)/(len1-1))
+denominator
+degree = numerator/denominator
+degree
+
+#Welsh ttest
+
+pval = pt(t1,degree)
+pval
+```
+    P Value = 0.004409615
+    pval < alpha
+    Reject the null hypothesis
+    There is sufficient evidence to conclude that average high school tuition 
+    for a student who does not partake in Greek < average high school tuition 
+    for a student who does partake in Greek life
+    
+    
+```{r}
+#t.test(greek_0$hstuition,greek_1$hstuition)
+```
+    
+    b. Construct a one-sided, lower-bound 90% confidence interval on the mean
+    amount of high school tuition paid by Duke students. Interpret the result.   
+    \vspace{5pt}
+
+```{r}
+#Calculating lower-bound 90% confidence interval
+z = qt(0.90,lengreek-1)
+#Finding interval size
+ci = z*sd_greek_money/sqrt(lengreek)
+ci
+lower_90 = mean_greek_money-ci
+lower_90
+```
+      Answer) A one-sided, lower-bound 90% confidence interval on the mean 
+      amount of high school tuition paid by Duke students is (25365.03,infinity)
+ 
+ 
+
+4. Seven trumpet players are given a new breathing exercise to help with their
+breath support. The trumpet players are asked to play a C note for as long as 
+they can both before and after the breathing exercise. The time (in seconds) that
+they can hold the note for are presented below. Assume times are normally 
+distributed. 
+\begin{center}
+\begin{tabular}{cccccccc}
+  \hline
+ Subject & 1	&2&	3&	4&	5	&6	&7\\
+ \hline
+Before & 9.1	&11.2	&11.9	&14.7	&11.7	&9.5	&14.2		\\
+After & 10.7&	14.2	&12.4	&14.6	&16.4	&10.1	&19.2	\\
+   \hline
+\end{tabular}
+\end{center}
+
+```{r}
+# Creating dataframe
+ind <- c(1,2,3,4,5,6,7)
+val <- c(1.6,3,0.5,-0.1,4.7,0.6,5)
+bef <- c(9.1,11.2,11.9,14.7,11.7,9.5,14.2)
+aft <- c(10.7,14.2,12.4,14.6,16.4,10.1,19.2)
+df <- data.frame(ind, bef, aft, val)
+df
+#val column has the difference values
+after = df$aft
+before = df$bef
+difference = df$val
+```
+
+    a. Construct a one-sided lower-bound 95\% confidence interval for the mean 
+    after-before change time holding a note. Interpret your interval.
+```{r}
+#one-sided lower-bound 95% confidence interval
+meandf = mean(difference)
+meandf
+sddf = sd(difference)
+sddf
+#Finding Lower Bound confidence interval
+n <- nrow(df)
+z3a = qt(0.95,n-1)
+z3a
+ci = z3a*sddf/sqrt(n)
+ci
+low_95 = meandf - ci # TO BE DONE
+low_95
+```
+One-sided lower-bound 95% confidence interval for the mean is (0.6618768,infinity)
+
+```{r}
+#t.test(difference, y = NULL, alternative = c("two.sided", "less", "greater"),
+#paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+```
+    
+    
+    b. Perform an appropriate test at the $\alpha=0.1$ significance level to 
+    determine if the mean time holding a note is greater after the exercise than
+    before.  
+    \vspace{5pt}
+    
+    Answer)
+    After- Before = Difference
+    H0: Difference less than or equal to zero
+    H1: Difference greater than zero
+    
+```{r}
+#Testing
+meanbef = mean(before)
+meanbef
+sdbef = sd(before)
+sdbef
+
+meanaft = mean(after)
+meanaft
+sdaft = sd(after)
+sdaft
+
+tdif = meandf*sqrt(n)/(sddf)
+tdif
+deg_fred = n-1
+pdif = 1-pt(tdif, deg_fred)
+pdif
+
+```
+    Answer) P Value is 0.01584723
+    P value < Alpha
+    Reject null hypothesis
+    There is sufficient evidence to conclude that mean time holding a note is 
+    greater after the exercise than before
+    
+
+5. Let $\mu$ be the average amount of time in minutes spent on social media apps
+each day. Based on an earlier study, it is hypothesized that $\mu=124$ minutes. 
+It is believed, though, that people are spending increasingly more time on social
+media apps during the pandemic. We sample $n$ people and determine the average
+amount of time spent on social media apps per day in order to test the hypotheses
+$H_0: \mu \le 124$ vs. $H_1:\mu>124$, at the $\alpha=0.01$ significance level. 
+Suppose we know that $\sigma=26$ minutes. 
+
+
+    a. Create a sequence of reasonable alternative values for $\mu$. 
+    Take $\mu_1 \in (124,190)$, using `seq(124,190, by=0.001)` in `R`.
+    
+    Answer)
+```{r}
+# Sequence of reasonable alternative values
+mu = seq(124,190, by=0.001)
+
+#Not printing all of them as there are more than 60k values
+#Printing only first 20 values
+for (x in mu) {
+  if (x == 124.020) {
+    break
+  }
+  print(x)
+}
+#power
+```
+    
+    
+    b. Use `R` to draw a power curve for when $n=5$. You may find the `plot()` 
+    function useful. In particular, `plot(mu1, __, type = "l", ylab = "Power", 
+    xlab = expression(mu[1]))` could be a useful starting point for formatting.
+    
+    Answer)
+```{r}
+#Calculating xbar
+n = 5
+sigma = 26
+u = 124
+zold = qnorm(0.99)
+zold
+xbar =  (zold*sigma)/sqrt(n) + u
+xbar
+
+```
+    
+```{r}
+# Power Curve for n=5
+znew = (xbar-mu)*sqrt(n)/sigma
+Beta = pnorm(znew)
+powernew= 1 -Beta 
+
+plot(mu, powernew, type = "l", ylab = "Power", xlab = expression(mu[1]), col='red')
+```
+    
+    c. Using the same general plot as part b, draw power curves for when the
+    sample size equals $n=5,15,25,50$. You can do this using the `lines()` 
+    function in place of when you used `plot()` in part b. Make the curve for
+    each of these a different color, and add a legend to distinguish these curves. 
+    
+    Answer)
+    
+```{r}
+#Power Curves
+mu = seq(124,190, by=0.001)
+
+sigma = 26
+u = 124
+n1 = 5
+n2 = 15
+n3 = 25
+n4 = 50
+
+
+xbar15 =  (zold*sigma)/sqrt(n2) + u
+xbar15
+xbar25 =  (zold*sigma)/sqrt(n3) + u
+xbar25
+xbar50 =  (zold*sigma)/sqrt(n4) + u
+xbar50
+
+z1new = ((xbar-mu)*sqrt(n1))/sigma
+powernew1= 1-pnorm(z1new)
+plot(mu, powernew1, type = "l", ylab = "Power", xlab = expression(mu[1]), col='red')
+
+z2new = ((xbar15-mu)*sqrt(n2))/(sigma)
+powernew2=1- pnorm(z2new)
+lines(mu, powernew2, type = "l", ylab = "Power", xlab = expression(mu[1]), col='blue')
+
+z3new = ((xbar25-mu)*sqrt(n3))/sigma
+powernew3=1- pnorm(z3new)
+lines(mu, powernew3, type = "l", ylab = "Power", xlab = expression(mu[1]), col='green')
+
+z4new = ((xbar50-mu)*sqrt(n4))/sigma
+powernew4= 1-pnorm(z4new)
+lines(mu, powernew4, type = "l", ylab = "Power", xlab = expression(mu[1]), col='black')
+
+legend('bottomright',c("N=5", "N=15","N=25","N=50"),lty=1,col=c("red","blue","green","black"))
+```
+    
+    
+    d. What is the power of this test when $\mu_1=141$ and $n=28$?
+
+    Answer)
+    
+```{r}
+#Calculating power
+u = 124
+
+ngiven = 28
+sigma = 26
+mean = 141
+
+xbard =  (zold*sigma)/sqrt(ngiven) + u
+xbard
+
+z = (mean-xbard)*sqrt(ngiven)/sigma
+z
+b= 1-pnorm(z)
+b
+power = 1-b
+power
+```
+    Power is 0.8714938
+    
+    e. How large of a sample size is needed to attain a power of $0.95$ when 
+    the true mean amount of time on social media apps is $\mu_1=128$?  
+    \vspace{5pt}
+    
+    Answer)
+```{r}
+#Calculating sample size
+alpha_e = 0.99
+power_e = 0.95
+beta_e = 1-power_e
+beta_e
+zalp = qnorm(alpha_e)
+zalp
+zbet = qnorm(power_e)
+zbet
+z_e = zalp + zbet
+z_e
+new_m = 128
+
+n_samplesize = ((z_e*sigma)/(new_m - u))^2
+n_samplesize
+
+```
+    
+    Sample Size = 667 for attaining power of 0.95. 
+    
+```{r}
+#Check
+ucheck = 124
+
+ncheck = 666.3011
+sigmacheck = 26
+meancheck = 128
+
+xbarcheck =  (zold*sigmacheck)/sqrt(ncheck) + ucheck
+xbarcheck
+
+zcheck = (meancheck- xbarcheck)*sqrt(ncheck)/sigmacheck
+zcheck
+bcheck= 1-pnorm(zcheck)
+bcheck
+powercheck = 1-bcheck
+powercheck
+```
+    
+
+6. When it is time for vacation, many of us look to Air BnB for renting a 
+room/house. Data collected on $n=83$ Air BnB listings in New York City are 
+contained in the file "airbnb.csv." Read this file into R.
+
+    a. Create two new variables: one for the price of full house rentals and one
+    for the price of private room rentals. You can use code such as this to subset:
+    
+    Answer)
+    Home variable: Full house rental ;
+    
+    Private variable: Private room rental ;
+    
+    price_home: Price of full house rental ;
+    
+    price_private: Price of private room rental
+    
+```{r}
+air <-  read.csv('airbnb.csv.')
+air
+home <- air[air$room_type=='Entire home', ]
+head(home)
+price_home = home$price
+price_home
+private <- air[air$room_type=='Private room', ]
+head(private)
+price_private = private$price
+price_private
+
+nhome <- nrow(home)
+nprivate <- nrow(private)
+nhome
+nprivate
+```
+    
+    b. Make a histogram for each of the new variables from part a to visualize
+    their distributions. You can use base R or ggplot2. 
+    
+    Answer)
+
+```{r}
+# Histogram depicting Price of Full House Rentals
+library(ggplot2)
+
+histohome <- ggplot(home,aes(x=price_home)) + 
+  geom_histogram(bins = 10,color="azure4", fill="bisque") + 
+  ggtitle("Histogram depicting Price of Full House Rentals") +
+  labs(y= "Number of Rentals", x = "Price of Full House")+
+  scale_x_continuous(breaks = seq(0, 1000, by = 50)) +
+  scale_y_continuous(breaks = seq(0, 10, by = 2))
+#bins = 10  as n= 27 for private rooms, Used Sturges formula
+histohome
+```
+
+
+```{r}
+#Histogram depicting Price of Private Rooms
+histoprivate <- ggplot(private,aes(x=price_private))  + 
+  geom_histogram(bins = 18,color="azure4",fill="bisque") + 
+  ggtitle("Histogram depicting Price of Private Rooms") +
+  labs(y= "Number of Rentals", x = "Price of Private Rooms") +
+  scale_x_continuous(breaks = seq(0, 400, by = 20)) +
+  scale_y_continuous(breaks = seq(0, 20, by = 2))
+#bins = 18  as n= 56 for private rooms, Used Sturges formula
+histoprivate
+```
+   
+   
+    c. Discuss why we generally can apply the central limit theorem to analyze 
+    these two variables.
+    You should mention the histogram and the sample size, along with any potential 
+    reservations you have about using the CLT here.
+    
+    Answer) 
+    Central limit theorem can't be applied to fll house rental, n is 27 
+    whcih is less than 30, and for central theorem to be used this condition
+    has to be satisfied.
+    
+    For private rooms, n=56, which is sufficiently large to apply CLT. Even in 
+    the graph, population is quite normally distributed except few points on the
+    right side.
+    
+    
+    
+    d. Calculate the mean, standard deviation, and sample size for the price 
+    of full home rentals.
+    
+    Answer)
+    
+```{r}
+meanhome = mean(price_home)
+#Mean 
+meanhome
+sdhome = sd(price_home)
+#Standard Deviation
+sdhome
+n1 <- nrow(home)
+#Sample Size
+n1
+```
+    Mean=258.2593, standard deviation=208.2271, and sample size=27 for the price 
+    of full home rentals.
+    
+    
+    e. Calculate the mean, standard deviation, and sample size for the price of
+    private room rentals.
+    
+    Answer)
+    
+```{r}
+meanprivate = mean(price_private)
+#Mean 
+meanprivate
+sdprivate = sd(price_private)
+#Standard Deviation
+sdprivate
+n2 <- nrow(private)
+#Sample Size
+n2
+```
+    Mean = 91.92857, standard deviation=49.91005, and sample size=56 for the
+    price of private room rentals.
+    
+    f. At the $\alpha=0.05$ significance level, test "by-hand" (i.e. do not 
+    use the `t.test()` function, but still use `R`) whether the average price of
+    renting an entire home in NYC is different from the average price of renting 
+    a private room. Use unequal variances. 
+    
+    Answer)
+    H0:  Average price of renting an entire home in NYC is = to the average 
+    price of renting  a private room 
+    H1: Average price of renting an entire home in NYC is not = to the average 
+    price of renting  a private room 
+    
+```{r}
+#testing
+s1 = sdhome^2
+s2 = sdprivate^2
+t = (meanhome - meanprivate)/(sqrt((s1/n1)+(s2/n2)))
+t
+
+numerator1 = (((s1)/n1)+((s2)/n2))^2
+denominator1 = ((((s1)/n1)^2)/(n1-1) + (((s2)/n2)^2)/(n2-1))
+degree1 = numerator1/denominator1
+degree1
+
+pval = 2*(1-pt(t,degree1))
+pval
+```
+  P Val is 0.0003360658
+  
+  P Val < Alpha
+  
+  We reject Null Hypothesis.
+  
+  There is sufficient evidence to conclude that average price of renting an 
+  entire home in NYC is not equal to the average price of renting  a private room
+
+```{r}
+#t.test(price_home,price_private)
+```
+    
+    
+    
+Short Answers:
+
+  * About how long did this assignment take you? Did you feel it was too long,
+  too short, or reasonable? 
+  5-6 Hours, It was reasonable
+  
+  * Who, if anyone, did you work with on this assignment?
+  No one
+  
+  * What questions do you have relating to any of the material we have covered
+  so far in class?  
+  Hypothesis testing with two variables, Confidence Intervals, Power.
