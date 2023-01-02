@@ -1,0 +1,81 @@
+---
+title: "Aradhya Mathur Homework0"
+author: "Aradhya Mathur"
+date: "2022-09-05"
+output: pdf_document
+---
+
+
+```{r}
+library(readr)
+library(ggplot2)
+library(moments)
+
+#Question 1
+# 1. Getting familiar with the dataset via exploratory data analysiinstall.packages("ggplot2")s. 
+#    a. Read the data into RStudio and summarize the data with the `summary()` function. 
+data1 <- read_csv("car_sales.csv")
+summary(data1)
+data2 <- data1[c('price')]
+Price <- as.numeric(data2$price)
+
+# b. How many bins does Sturges' formula suggest we use for a histogram of `price`? Show your work. 
+bins <- ceiling(log2(n)) + 1 #Sturges' Rule
+n <- 152 # 152 observations are seen in data2
+bins <- ceiling(log2(152)) + 1 #Substituting value of n
+bins <- ceiling(log2(152)) + 1 # ⌈7.248⌉+ 1= 8+1 =9
+bins2 <- nclass.Sturges(data2$price) # Alternate method to get bins
+
+# c. Create a histogram of `price` using the number of bins suggested by Sturges' formula in 1b. Make sure to appropriately title the histogram and label the axes. Comment on the center, shape, and spread. 
+
+hist(Price, breaks = bins, xlab = "Price of Cars", ylab = "Number of Cars", col = blues9, main = "Histogram with 9 Bins depicting Price of Cars")
+
+#Question 2
+
+#  a. Calculate the mean, median, and 10\% trimmed mean of the selling price. Report the mean, median, and 10\% trimmed mean on the histogram. In particular, create a red vertical line on the histogram at the mean, and report the value of the mean in red next to the line using the form "$\bar{x}=$". Create a blue vertical line on the histogram at the median, and report the value of the median in blue next to the line using the form "$\tilde{x}=$". Create a green vertical line on the histogram at the 10\% trimmed mean, and report the value of the 10\% trimmed mean in green next to the line using the form "$\bar{x}_{10}=$" (to get $\bar{x}_{10}$ to print on the plot, use `bar(x)[10]` within the `paste()` function). 
+
+mean <- mean(data2$price)
+median <- median(data2$price)
+trim <- mean(data2$price, trim=0.1)
+abline(v = mean(data2$price), col="red", lwd=3)
+abline(v = median(data2$price), col="blue", lwd=3)
+abline(v = mean(data2$price, trim=0.1), col="green", lwd=3)
+text(mean, 54.5, bquote("(" * bar(x) * " = " * .(mean) *  ")"), col="#ff0000")
+text(median, 50.5, bquote("(" * tilde(x) * " = " * .(median) * ")"), col="#0000FF")
+text(trim, 46.5, bquote("(" * bar(x)[10] * " = " * .(trim) *  ")"), col="#00ff00")
+
+# b. Calculate and report the 25th and 75th percentiles. 
+
+quantile <- quantile(data2$price, probs = c(.25, .75))
+quantile
+
+# c. Calculate and report the interquartile range. 
+IQR <- IQR(data2$price)
+IQR 
+
+# d. Calculate and report the standard span, the lower fence, and the upper fence.
+
+percentile1 <- quantile(data2$price, probs = c(.25))
+percentile2 <- quantile(data2$price, probs = c(.75))
+lfence <- percentile1 - (IQR*1.5)
+ufence <- percentile2 + (IQR*1.5)
+span <- IQR*1.5
+
+# e. Are there any outliers? Subset the outlying points. Use code based on the following:
+
+outlier1 <- data2[data2$price >= 53013.75, ]
+outlier2 <- data2[data2$price <= -3186.25, ]
+
+# f. Calculate and report the variance, standard deviation, and coefficient of variation of car prices. 
+var <- var(data2$price)
+sd <- sd(data2$price)
+cv <- sd/mean*100
+
+# g. We have seen from the histogram that the data are skewed. Calculate and report the skewness. Comment on this value and how it matches with what you visually see in the histogram. 
+
+skewness(Price)
+
+# Question 3
+
+```
+

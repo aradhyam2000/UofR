@@ -1,0 +1,225 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\urlstyle{same} % disable monospaced font for URLs
+\hypersetup{
+  pdftitle={Aradhya Mathur Homework0},
+  pdfauthor={Aradhya Mathur},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+
+\title{Aradhya Mathur Homework0}
+\author{Aradhya Mathur}
+\date{2022-09-05}
+
+\begin{document}
+\maketitle
+
+\begin{verbatim}
+## Rows: 152 Columns: 11
+## -- Column specification --------------------------------------------------------
+## Delimiter: ","
+## chr (2): Manufacturer, Model
+## dbl (9): price, Engine_size, Horsepower, Wheelbase, Width, Length, Curb_weig...
+## 
+## i Use `spec()` to retrieve the full column specification for this data.
+## i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+\end{verbatim}
+
+\begin{verbatim}
+##  Manufacturer          Model               price        Engine_size   
+##  Length:152         Length:152         Min.   : 9235   Min.   :1.000  
+##  Class :character   Class :character   1st Qu.:17889   1st Qu.:2.300  
+##  Mode  :character   Mode  :character   Median :22747   Median :3.000  
+##                                        Mean   :27332   Mean   :3.049  
+##                                        3rd Qu.:31939   3rd Qu.:3.575  
+##                                        Max.   :85500   Max.   :8.000  
+##    Horsepower      Wheelbase         Width           Length     
+##  Min.   : 55.0   Min.   : 92.6   Min.   :62.60   Min.   :149.4  
+##  1st Qu.:147.5   1st Qu.:102.9   1st Qu.:68.38   1st Qu.:177.5  
+##  Median :175.0   Median :107.0   Median :70.40   Median :186.7  
+##  Mean   :184.8   Mean   :107.4   Mean   :71.09   Mean   :187.1  
+##  3rd Qu.:211.2   3rd Qu.:112.2   3rd Qu.:73.10   3rd Qu.:195.1  
+##  Max.   :450.0   Max.   :138.7   Max.   :79.90   Max.   :224.5  
+##   Curb_weight    Fuel_capacity   Fuel_efficiency
+##  Min.   :1.895   Min.   :10.30   Min.   :15.00  
+##  1st Qu.:2.965   1st Qu.:15.78   1st Qu.:21.00  
+##  Median :3.336   Median :17.20   Median :24.00  
+##  Mean   :3.376   Mean   :17.96   Mean   :23.84  
+##  3rd Qu.:3.821   3rd Qu.:19.80   3rd Qu.:26.00  
+##  Max.   :5.572   Max.   :32.00   Max.   :45.00
+\end{verbatim}
+
+\includegraphics{Assignment0Stats-dupl_files/figure-latex/q1c-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data1 }\OtherTok{\textless{}{-}} \FunctionTok{read\_csv}\NormalTok{(}\StringTok{"car\_sales.csv"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Rows: 152 Columns: 11
+## -- Column specification --------------------------------------------------------
+## Delimiter: ","
+## chr (2): Manufacturer, Model
+## dbl (9): price, Engine_size, Horsepower, Wheelbase, Width, Length, Curb_weig...
+## 
+## i Use `spec()` to retrieve the full column specification for this data.
+## i Specify the column types or set `show_col_types = FALSE` to quiet this message.
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(data1)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##  Manufacturer          Model               price        Engine_size   
+##  Length:152         Length:152         Min.   : 9235   Min.   :1.000  
+##  Class :character   Class :character   1st Qu.:17889   1st Qu.:2.300  
+##  Mode  :character   Mode  :character   Median :22747   Median :3.000  
+##                                        Mean   :27332   Mean   :3.049  
+##                                        3rd Qu.:31939   3rd Qu.:3.575  
+##                                        Max.   :85500   Max.   :8.000  
+##    Horsepower      Wheelbase         Width           Length     
+##  Min.   : 55.0   Min.   : 92.6   Min.   :62.60   Min.   :149.4  
+##  1st Qu.:147.5   1st Qu.:102.9   1st Qu.:68.38   1st Qu.:177.5  
+##  Median :175.0   Median :107.0   Median :70.40   Median :186.7  
+##  Mean   :184.8   Mean   :107.4   Mean   :71.09   Mean   :187.1  
+##  3rd Qu.:211.2   3rd Qu.:112.2   3rd Qu.:73.10   3rd Qu.:195.1  
+##  Max.   :450.0   Max.   :138.7   Max.   :79.90   Max.   :224.5  
+##   Curb_weight    Fuel_capacity   Fuel_efficiency
+##  Min.   :1.895   Min.   :10.30   Min.   :15.00  
+##  1st Qu.:2.965   1st Qu.:15.78   1st Qu.:21.00  
+##  Median :3.336   Median :17.20   Median :24.00  
+##  Mean   :3.376   Mean   :17.96   Mean   :23.84  
+##  3rd Qu.:3.821   3rd Qu.:19.80   3rd Qu.:26.00  
+##  Max.   :5.572   Max.   :32.00   Max.   :45.00
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{data2 }\OtherTok{\textless{}{-}}\NormalTok{ data1[}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}price\textquotesingle{}}\NormalTok{)]}
+\FunctionTok{hist}\NormalTok{(Price, }\AttributeTok{breaks =}\NormalTok{ bins, }\AttributeTok{xlab =} \StringTok{"Price of Cars"}\NormalTok{, }\AttributeTok{ylab =} \StringTok{"Number of Cars"}\NormalTok{, }\AttributeTok{col =}\NormalTok{ blues9, }\AttributeTok{main =} \StringTok{"Histogram with 9 Bins depicting Price of Cars"}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{v =} \FunctionTok{mean}\NormalTok{(data2}\SpecialCharTok{$}\NormalTok{price), }\AttributeTok{col=}\StringTok{"red"}\NormalTok{, }\AttributeTok{lwd=}\DecValTok{3}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{v =} \FunctionTok{median}\NormalTok{(data2}\SpecialCharTok{$}\NormalTok{price), }\AttributeTok{col=}\StringTok{"blue"}\NormalTok{, }\AttributeTok{lwd=}\DecValTok{3}\NormalTok{)}
+\FunctionTok{abline}\NormalTok{(}\AttributeTok{v =} \FunctionTok{mean}\NormalTok{(data2}\SpecialCharTok{$}\NormalTok{price, }\AttributeTok{trim=}\FloatTok{0.1}\NormalTok{), }\AttributeTok{col=}\StringTok{"green"}\NormalTok{, }\AttributeTok{lwd=}\DecValTok{3}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(mean, }\FloatTok{54.5}\NormalTok{, }\FunctionTok{bquote}\NormalTok{(}\StringTok{"("} \SpecialCharTok{*} \FunctionTok{bar}\NormalTok{(x) }\SpecialCharTok{*} \StringTok{" = "} \SpecialCharTok{*}\NormalTok{ .(mean) }\SpecialCharTok{*}  \StringTok{")"}\NormalTok{), }\AttributeTok{col=}\StringTok{"\#ff0000"}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(median, }\FloatTok{50.5}\NormalTok{, }\FunctionTok{bquote}\NormalTok{(}\StringTok{"("} \SpecialCharTok{*} \FunctionTok{tilde}\NormalTok{(x) }\SpecialCharTok{*} \StringTok{" = "} \SpecialCharTok{*}\NormalTok{ .(median) }\SpecialCharTok{*} \StringTok{")"}\NormalTok{), }\AttributeTok{col=}\StringTok{"\#0000FF"}\NormalTok{)}
+\FunctionTok{text}\NormalTok{(trim, }\FloatTok{46.5}\NormalTok{, }\FunctionTok{bquote}\NormalTok{(}\StringTok{"("} \SpecialCharTok{*} \FunctionTok{bar}\NormalTok{(x)[}\DecValTok{10}\NormalTok{] }\SpecialCharTok{*} \StringTok{" = "} \SpecialCharTok{*}\NormalTok{ .(trim) }\SpecialCharTok{*}  \StringTok{")"}\NormalTok{), }\AttributeTok{col=}\StringTok{"\#00ff00"}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{Assignment0Stats-dupl_files/figure-latex/unnamed-chunk-1-1.pdf}
+
+\begin{verbatim}
+##      25%      75% 
+## 17888.75 31938.75
+\end{verbatim}
+
+\begin{verbatim}
+## [1] 14050
+\end{verbatim}
+
+\begin{verbatim}
+## [1] 1.760286
+\end{verbatim}
+
+\end{document}
