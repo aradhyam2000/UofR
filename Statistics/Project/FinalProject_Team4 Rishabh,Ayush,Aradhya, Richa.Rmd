@@ -1,0 +1,536 @@
+---
+title: "Project"
+author: "Rishabh Kumar Kandoi | Aradhya Mathur | Ayush Singla | Richa Yadav"
+date: "2022-12-07"
+output:
+  pdf_document: default
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts = list(width.cutoff = 90), tidy = TRUE)
+```
+
+```{r libraries, echo=F, message=F}
+library(dplyr)
+library(ggplot2)
+library(moments)
+library(DescTools)
+library(ggthemes)
+library(ggpubr)  # "brew install nlopt" might be required
+```
+
+Q1. The marketing team first wants to understand how many ads they are running on each social media
+platform, as well as the demographics of each social media platform’s user base.
+
+a. Create a relative frequency table and a corresponding relative frequency barplot to visualize the
+fraction of ads on each platform. Make sure to label the plot (title, axes), and comment on trends
+you observe
+
+b. The CFO’s ad strategy is supposed to run 10% of all ads on Twitter, 10% on Facebook, 20% on
+Instagram, 30% on TikTok, and 30% on YouTube. Is the marketing department following this
+strategy? Run an appropriate statistical test at the alpha = 0.05 significance level and comment on
+the results.
+
+c. For each social media platform, calculate the variance, standard deviation, coefficient of variation,
+and skew of age, and visualize the distribution of age using an appropriate tool from descriptive
+statistics. Comment on any trends you see.
+
+```{r q1a, echo=T, warning=FALSE}
+data = read.csv("ads4.csv")
+
+# Part a)
+grouped_data <- data %>% group_by(socialmedia) %>% summarise(total_count=n(),.groups = 'drop') %>% as.data.frame()
+grouped_data
+
+ggplot(data=grouped_data, aes(x=socialmedia, y=total_count, fill=socialmedia)) + geom_bar(stat="identity") + geom_text(aes(label=total_count), vjust=1.6, color="white", position = position_dodge(0.9), size=3.5) + ggtitle("Number of advertisements across social media") + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+
+paste(" Insight : More than 60% of the ads are running on tiktok and youtube with only 4% on twitter")
+
+# Part b)
+# H0 - Proportion Values: Twitter=0.1, Facebook=0.1, Instagram=0.2, TikTok=0.3, YouTube=0.3
+# H1 - Atleast one of these proportions does not hold
+
+observed_exp_table = data.frame (Row = c("Twitter", "Facebook", "Instagram", "TikTok", "YouTube"), Observed  = c("17", "71", "75", "150", "133"), Expected = c("44.6", "44.6", "89.2", "133.8", "133.8"))
+observed_exp_table
+
+chisq.test(c(17, 71, 75, 150, 133), p=c(0.1, 0.1, 0.2, 0.3, 0.3))
+```
+
+```{r q1, echo=T, warning=FALSE, results='asis'}
+paste("P-value = 1.859e-07, Thus atleast one of the proportions does not hold. Insight: The observed and expected distribution of ads across various social media platforms are not the same. Hence, marketing team needs to make necessary changes in order to follow their plans")
+
+# Part c)
+twitter_data = filter(data, socialmedia == "Twitter")['age']
+instagram_data = filter(data, socialmedia == "Instagram")['age']
+facebook_data = filter(data, socialmedia == "Facebook")['age']
+tiktok_data = filter(data, socialmedia == "TikTok")['age']
+youtube_data = filter(data, socialmedia == "YouTube")['age']
+
+paste("For Twitter Data: Var =", var(twitter_data), ", Standard Deviation =", sd(as.numeric(unlist(twitter_data))), ", Mean =", mean(as.numeric(unlist(twitter_data))), ", Coefficient of Variation =", sd(as.numeric(unlist(twitter_data))) / mean(as.numeric(unlist(twitter_data))), ", Skewness =", skewness(twitter_data))
+
+paste("For Instagram Data: Var =", var(instagram_data), ", Standard Deviation =", sd(as.numeric(unlist(instagram_data))), ", Mean =", mean(as.numeric(unlist(instagram_data))), ", Coefficient of Variation =", sd(as.numeric(unlist(instagram_data))) / mean(as.numeric(unlist(instagram_data))), ", Skewness =", skewness(instagram_data))
+
+paste("For Facebook Data: Var =", var(facebook_data), ", Standard Deviation =", sd(as.numeric(unlist(facebook_data))), ", Mean =", mean(as.numeric(unlist(facebook_data))), ", Coefficient of Variation =", sd(as.numeric(unlist(facebook_data))) / mean(as.numeric(unlist(facebook_data))), ", Skewness =", skewness(facebook_data))
+
+paste("For TikTok Data: Var =", var(tiktok_data), ", Standard Deviation =", sd(as.numeric(unlist(tiktok_data))), ", Mean =", mean(as.numeric(unlist(tiktok_data))), ", Coefficient of Variation =", sd(as.numeric(unlist(tiktok_data))) / mean(as.numeric(unlist(tiktok_data))), ", Skewness =", skewness(tiktok_data))
+
+paste("For YouTube Data: Var =", var(youtube_data), ", Standard Deviation =", sd(as.numeric(unlist(youtube_data))), ", Mean =", mean(as.numeric(unlist(youtube_data))), ", Coefficient of Variation =", sd(as.numeric(unlist(youtube_data))) / mean(as.numeric(unlist(youtube_data))), ", Skewness =", skewness(youtube_data))
+
+ggplot(data, aes(x=socialmedia, y=age)) + geom_point(size=2, shape=23, color="darkred") + theme_stata() + scale_color_stata() + ggtitle("Distribution of Age over social media platforms") + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+
+paste("Insight: Distribution of age across each social media platform looks normal")
+```
+
+Q2. The CEO of the company believes that ads differ in effectiveness (measured in terms of profit, or ad
+revenue - ad cost) depending on the season. However, is his intuition correct?
+
+a. Visualize the data using four histograms (one from each season). On each plot, draw and label
+vertical lines for the mean, median, and 10% trimmed mean. Make sure to label the plots (title,
+axes, legend), and comment on trends you observe.
+
+b. In particular, the CEO believes that summer ads yield more profit than winter ads. At the alpha = 0.05
+significance level, run an appropriate statistical test (or series of tests) and comment on your
+results.
+
+c. What if you wanted to compare all seasons at once at the alpha = 0.05 significance level with a
+familywise error of alphaFW E = 0.05? Run an appropriate test (or series of tests) and comment on
+your results.
+
+
+```{r q2, echo=T, warning=FALSE, results='asis'}
+data = read.csv("ads4.csv")
+data['Profit'] = data$adrevenue - data$adcost
+
+# Part a)
+fall_data = filter(data, season == "fall")['Profit']
+spring_data = filter(data, season == "spring")['Profit']
+summer_data = filter(data, season == "summer")['Profit']
+winter_data = filter(data, season == "winter")['Profit']
+
+# Fall Data 
+
+bins <- nclass.Sturges(fall_data$Profit)
+ggplot(fall_data, aes(x=Profit)) + geom_histogram(bins=bins, col="white") -> plot1
+plot1 + labs(title="Fall Season Ads Profit", x="Profit", y="Count") -> plot2
+plot2 + theme(plot.title = element_text(hjust=0.5, face="bold")) -> plot3
+
+mean <- mean(as.numeric(unlist(fall_data)))
+median <- median(as.numeric(unlist(fall_data)))
+tenPerTrimmedMean <- mean(as.numeric(unlist(fall_data)), trim=0.1)
+plot3 + geom_vline(aes(xintercept=mean), col="red") + 
+  annotate("text", x=mean+6, y=75, parse=TRUE, label=paste("bar(x) :", round(mean, 2))) + 
+  geom_vline(aes(xintercept=median), col="blue") + 
+  annotate("text", x=median-7, y=70, parse=TRUE, label=paste("tilde(x) :", median)) + 
+  geom_vline(aes(xintercept=tenPerTrimmedMean), col="green") + 
+  annotate("text", x=tenPerTrimmedMean+7, y=80, parse=TRUE, label=paste("bar(x)[10] :", round(tenPerTrimmedMean, 2)))
+
+# Spring Data
+
+bins <- nclass.Sturges(spring_data$Profit)
+ggplot(spring_data, aes(x=Profit)) + geom_histogram(bins=bins, col="white") -> plot1
+plot1 + labs(title="Spring Season Ads Profit", x="Profit", y="Count") -> plot2
+plot2 + theme(plot.title = element_text(hjust=0.5, face="bold")) -> plot3
+
+mean <- mean(as.numeric(unlist(spring_data)))
+median <- median(as.numeric(unlist(spring_data)))
+tenPerTrimmedMean <- mean(as.numeric(unlist(spring_data)), trim=0.1)
+plot3 + geom_vline(aes(xintercept=mean), col="red") + 
+  annotate("text", x=mean+3.5, y=47, parse=TRUE, label=paste("bar(x) :", round(mean, 2))) + 
+  geom_vline(aes(xintercept=median), col="blue") + 
+  annotate("text", x=median-3, y=42, parse=TRUE, label=paste("tilde(x) :", median)) + 
+  geom_vline(aes(xintercept=tenPerTrimmedMean), col="green") + 
+  annotate("text", x=tenPerTrimmedMean+3, y=50, parse=TRUE, label=paste("bar(x)[10] :", round(tenPerTrimmedMean, 2)))
+
+# Summer Data
+
+bins <- nclass.Sturges(summer_data$Profit)
+ggplot(summer_data, aes(x=Profit)) + geom_histogram(bins=bins, col="white") -> plot1
+plot1 + labs(title="Summer Season Ads Profit", x="Profit", y="Count") -> plot2
+plot2 + theme(plot.title = element_text(hjust=0.5, face="bold")) -> plot3
+
+mean <- mean(as.numeric(unlist(summer_data)))
+median <- median(as.numeric(unlist(summer_data)))
+tenPerTrimmedMean <- mean(as.numeric(unlist(summer_data)), trim=0.1)
+plot3 + geom_vline(aes(xintercept=mean), col="red") + 
+  annotate("text", x=mean+4, y=85, parse=TRUE, label=paste("bar(x) :", round(mean, 2))) + 
+  geom_vline(aes(xintercept=median), col="blue") + 
+  annotate("text", x=median-4, y=85, parse=TRUE, label=paste("tilde(x) :", median)) + 
+  geom_vline(aes(xintercept=tenPerTrimmedMean), col="green") + 
+  annotate("text", x=tenPerTrimmedMean+4.5, y=80, parse=TRUE, label=paste("bar(x)[10] :", round(tenPerTrimmedMean, 2)))
+
+# Winter Data
+
+bins <- nclass.Sturges(winter_data$Profit)
+ggplot(winter_data, aes(x=Profit)) + geom_histogram(bins=bins, color="white") -> plot1
+plot1 + labs(title="Winter Season Ads Profit", x="Profit", y="Count") -> plot2
+plot2 + theme(plot.title = element_text(hjust=0.5, face="bold")) -> plot3
+
+mean <- mean(as.numeric(unlist(winter_data)))
+median <- median(as.numeric(unlist(winter_data)))
+tenPerTrimmedMean <- mean(as.numeric(unlist(winter_data)), trim=0.1)
+plot3 + geom_vline(aes(xintercept=mean), col="red") + 
+  annotate("text", x=mean+5, y=75, parse=TRUE, label=paste("bar(x) :", round(mean, 2))) + 
+  geom_vline(aes(xintercept=median), col="blue") + 
+  annotate("text", x=median-4, y=70, parse=TRUE, label=paste("tilde(x) :", median)) + 
+  geom_vline(aes(xintercept=tenPerTrimmedMean), col="green") + 
+  annotate("text", x=tenPerTrimmedMean+5, y=80, parse=TRUE, label=paste("bar(x)[10] :", round(tenPerTrimmedMean, 2)))
+
+paste(" Insight : Distribution of age across all seasons is slighly right skewed with mean value greater than median. Trimmed mean gives a better picture as it elimates 10% data from both ends")
+```
+
+```{r q2b1, echo=T, warning=FALSE}
+# Part b)
+# H0 - summer ads yield less than or equal to profit than winter ads
+# H1 - summer ads yield more profit than winter ads
+
+summer_data = filter(data, season == "summer")
+summer_data = summer_data$adrevenue - summer_data$adcost
+winter_data = filter(data, season == "winter")
+winter_data = winter_data$adrevenue - winter_data$adcost
+
+mu_summer_data_profits = mean(summer_data)
+mu_winter_data_profits = mean(winter_data)
+
+var_summer_data_profits = var(summer_data)
+var_winter_data_profits = var(winter_data)
+
+# Assuming equal population variances (unknown)
+t.test(summer_data, winter_data, paired=F, var.equal=T, alternative="greater", conf.level=0.95)
+
+# Assuming unequal population variances
+t.test(summer_data, winter_data, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+```
+
+```{r q2b2, echo=T, warning=FALSE, results='asis'}
+paste("P-value = 0.9487, thus we fail to reject null hypothesis. Insight: We don't have enough evidence to conclude that average summer profit is greater than winter.")
+```
+
+```{r q2c1, echo=T, warning=FALSE}
+# Part c)
+# H0 - average profit of all pair of seasons is equal
+# H1 - atleast one pair of seasons has different average profit
+data['Profit'] = data$adrevenue - data$adcost
+
+model = aov(Profit ~ season, data = data)
+summary(model)
+
+pairwise.t.test(data$Profit, data$season, p.adjust.method = "bonferroni")
+
+ScheffeTest(data$Profit, data$season, conf.level = 0.95)
+```
+
+```{r q2c2, echo=T, warning=FALSE, results='asis'}
+paste("Insight : As p value for all pair of seasons is significant (greater than 0.05), thus all pair of seasons have equal average profit at 95% significance. We conclude that choice of season does not impact profit.")
+```
+
+Q3. The CFO wants to know if the mean profits (ad revenue - ad cost) are the same on each platform, but
+he adds the stipulation that the Type I error of the analysis can be at most 5%, and the familywise error
+of any follow-up tests can also be at most 5%. If mean profits are indeed not equal on each platform,
+please identify pairs of platforms for which there is a statistically significant difference between mean
+profits.
+
+a. Visualize the mean profits for each platform using side-by-side boxplots. Identify any outliers and
+comment on trends.
+b. Perform an appropriate statistical test (or series of statistical tests) and comment on your findings.
+
+```{r q3, echo=T, warning=FALSE, results='asis'}
+data = read.csv("ads4.csv")
+data['Profit'] = data$adrevenue - data$adcost
+
+# Part a)
+my.bp <<-ggplot(data=data, aes(y= Profit, x=socialmedia, fill=socialmedia))
+my.bp <- my.bp + geom_boxplot()
+my.bp <- my.bp + ggtitle("Social Media wise Profits Distribution") 
+my.bp <- my.bp +  ylab("Profit") + xlab("Social Media") 
+my.bp <- my.bp + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+my.bp
+
+paste(" Insight : Mean profit for Instagram is more than Tiktok with less outliers so company can consider investing more on ads over Instagram as compared to Tiktok. Both have approximately 30% negative profit generating ads. Twitter has the least mean profit and % ads distribution. Distribution of profit at Youtube is right skewed. Around 38% Youtube ads are generating negative profit. Overall, youtube ads have higher variance and more outliers on the positive side that is essentially leading to a higher avg profit as other platforms i.e. 8")
+```
+
+```{r q3b1, echo=T, warning=FALSE}
+# Part b)
+# H0 - average profit of social media platforms is same
+# H1 - atleast one pair of social media platforms has different average profit
+model = aov(Profit ~ socialmedia, data = data)
+summary(model)
+```
+
+```{r q3b2, echo=T, warning=FALSE, results='asis'}
+paste("P-val = 0.00925, thus we reject the null hypothesis. Insight: We can conclude that mean profit between various social media platforms is different which aligns with our observations above.")
+```
+
+Q4. The CFO also wants to better understand the relationship between acquiring new customers and net
+profit.
+
+a. Visualize the relationship between whether or not someone is a new customer and the net profit
+off of that customer using an appropriate tool from descriptive statistics. Comment on any trends
+you observe.
+b. Is advertising on different social media platforms associated with different rates of acquiring new
+customers? Run an appropriate statistical test at the alpha = 0.05 significance level and comment on
+the results.
+c. Construct a two-sided 95% confidence interval for the proportion of ads that lead to new customers.
+d. An analyst on another team claims that acquiring new customers is more profitable than trying to
+sell more products to existing customers. Test their claim at the alpha = 0.05 significance level, and
+comment on your results.
+
+```{r q4, echo=T, warning=FALSE, results='asis'}
+# Part a)
+data = read.csv("ads4.csv")
+data['Profit'] = data$adrevenue - data$adcost
+new_customers = filter(data, newcustomer == "yes")['Profit']
+new_customers_avg_profit = mean(as.numeric(unlist(new_customers)))
+new_customers_median_profit = median(as.numeric(unlist(new_customers)))
+old_customers = filter(data, newcustomer == "no")['Profit']
+old_customers_avg_profit = mean(as.numeric(unlist(old_customers)))
+old_customers_median_profit = median(as.numeric(unlist(old_customers)))
+
+my.bp <<-ggplot(data=data, aes(y= Profit, x=newcustomer, fill=newcustomer))
+my.bp <- my.bp + geom_boxplot()
+my.bp <- my.bp + ggtitle("Social Media wise Profits Distribution") 
+my.bp <- my.bp +  ylab("Profit") + xlab("Social Media") 
+my.bp <- my.bp + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+my.bp
+
+d = data.frame(Profit=c(new_customers_avg_profit, old_customers_avg_profit), Customer=c("New Customer", "Old Customer"))
+ggplot(d, aes(x=Customer, y=Profit, fill=Customer)) +
+    geom_bar(stat='identity', position='dodge') + labs(title="Average Profit for New/Old Customers", x="Customer", y="Avg Profit") + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+
+d = data.frame(Profit=c(new_customers_median_profit, old_customers_median_profit), Customer=c("New Customer", "Old Customer"))
+ggplot(d, aes(x=Customer, y=Profit, fill=Customer)) +
+    geom_bar(stat='identity', position='dodge') + labs(title="Median Profit for New/Old Customers", x="Customer", y="Median Profit") + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+
+paste(" Insight : Overall new customers are generating more profit than old customers but since the gap is very less we will rely on significant test done at a later stage. At Youtube & Facebook, old customers are generating more profit whereas it is the opp case at Insta(new). Also, at Insta 30% are new users.  Therefore, putting more ads on insta and acquiring more customers can generate more profit. For Tiktok, profit is same for both category of customers")
+```
+
+```{r q4b1, echo=T, warning=FALSE}
+# Part b)
+# H0 - rate of acquiring new users for social media platforms is same, i.e. proportion of new users are same across any two social media platforms in study,
+# H1 - rate of acquiring new users for social media platforms is different, i.e., different proportions of new users across any two social media platforms in study.
+twitter_data = filter(data, socialmedia == "Twitter")
+instagram_data = filter(data, socialmedia == "Instagram")
+facebook_data = filter(data, socialmedia == "Facebook")
+tiktok_data = filter(data, socialmedia == "TikTok")
+youtube_data = filter(data, socialmedia == "YouTube")
+
+twitter_data_new_cust_count = nrow(filter(twitter_data, newcustomer == "yes"))
+instagram_data_new_cust_count = nrow(filter(instagram_data, newcustomer == "yes"))
+facebook_data_new_cust_count = nrow(filter(facebook_data, newcustomer == "yes"))
+tiktok_data_new_cust_count = nrow(filter(tiktok_data, newcustomer == "yes"))
+youtube_data_new_cust_count = nrow(filter(youtube_data, newcustomer == "yes"))
+
+prop.test(x=c(twitter_data_new_cust_count, instagram_data_new_cust_count), n=c(nrow(twitter_data), nrow(instagram_data)), p=NULL)
+prop.test(x=c(twitter_data_new_cust_count, facebook_data_new_cust_count), n=c(nrow(twitter_data), nrow(facebook_data)), p=NULL)
+prop.test(x=c(twitter_data_new_cust_count, tiktok_data_new_cust_count), n=c(nrow(twitter_data), nrow(tiktok_data)), p=NULL)
+prop.test(x=c(twitter_data_new_cust_count, youtube_data_new_cust_count), n=c(nrow(twitter_data), nrow(youtube_data)), p=NULL)
+prop.test(x=c(instagram_data_new_cust_count, facebook_data_new_cust_count), n=c(nrow(instagram_data), nrow(facebook_data)), p=NULL)
+prop.test(x=c(instagram_data_new_cust_count, tiktok_data_new_cust_count), n=c(nrow(instagram_data), nrow(tiktok_data)), p=NULL)
+prop.test(x=c(instagram_data_new_cust_count, youtube_data_new_cust_count), n=c(nrow(instagram_data), nrow(youtube_data)), p=NULL)
+prop.test(x=c(facebook_data_new_cust_count, tiktok_data_new_cust_count), n=c(nrow(facebook_data), nrow(tiktok_data)), p=NULL)
+prop.test(x=c(facebook_data_new_cust_count, youtube_data_new_cust_count), n=c(nrow(facebook_data), nrow(youtube_data)), p=NULL)
+prop.test(x=c(tiktok_data_new_cust_count, youtube_data_new_cust_count), n=c(nrow(tiktok_data), nrow(youtube_data)), p=NULL)
+```
+
+```{r q4b2, echo=T, warning=FALSE, results='asis'}
+paste(" Insight : Some of the pair of social media platforms does have equal rate of acquiring new users while others have different rate as can be seen from the pvalues. Therefore, we conclude advertising on different social media platforms is associated with different rates of acquiring new customers but it depends on social media paltform used. Different proportion values are seen among pairs (Instagram, Facebook), (Instagram, TikTok), (Facebook, TikTok), (Facebook, YouTube), while other pairs have significantly equal proportion of new users.")
+```
+
+```{r q4c1, echo=T, warning=FALSE}
+# Part c)
+prop.test(x=twitter_data_new_cust_count, n=nrow(twitter_data), p=NULL, conf.level = 0.95, correct = TRUE)
+prop.test(x=facebook_data_new_cust_count, n=nrow(facebook_data), p=NULL, conf.level = 0.95, correct = TRUE)
+prop.test(x=tiktok_data_new_cust_count, n=nrow(tiktok_data), p=NULL, conf.level = 0.95, correct = TRUE)
+prop.test(x=youtube_data_new_cust_count, n=nrow(youtube_data), p=NULL, conf.level = 0.95, correct = TRUE)
+prop.test(x=instagram_data_new_cust_count, n=nrow(instagram_data), p=NULL, conf.level = 0.95, correct = TRUE)
+```
+
+```{r q4c2, echo=T, warning=FALSE, results='asis'}
+paste("Confidence Intervals thus found are as follows: Twitter=[0.07823122, 0.50238373], Facebook=[0.04389665, 0.19839452]. TikTok=[0.3854464, 0.5496202], YouTube=[0.3655242, 0.5395956], Instagram=[0.2081231, 0.4252191].")
+```
+
+```{r q4d1, echo=T, warning=FALSE}
+# Part d)
+# H0 - average profit for new customers is less than or equal to that of existing customers
+# H1 - average profit for new customers is more than that of existing customers
+# Assuming equal population variances (unknown)
+t.test(data[data$newcustomer == "yes", ]$Profit, data[data$newcustomer == "no", ]$Profit, paired=F, var.equal=T, alternative="greater", conf.level=0.95)
+
+# Assuming unequal population variances
+t.test(data[data$newcustomer == "yes", ]$Profit, data[data$newcustomer == "no", ]$Profit, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+```
+
+```{r q4d2, echo=T, warning=FALSE, results='asis'}
+paste("P-value = 0.4498, thus we fail to reject the null hypothesis, i.e., we don't have enough evidence to conclude that the average profit for new customers is more than that generated by the existing customers. Insight: Acquiring new customers is less profitable than selling to existing customers.")
+```
+
+Q5. The CEO and CFO disagree about whether being on a mobile phone affects average profits. The CEO
+thinks that being on your phone or computer doesn’t affect overall profits, whereas the CFO thinks
+there is a difference.
+
+a. Visualize profits by mobile phone status for each social network platform using an appropriate
+tool from descriptive statistics. Make sure to label the plot (title, axes, legend), and comment on
+trends you observe.
+b. At the alpha = 0.05 significance level, examine whether or not being on a mobile phone affects average
+profits for each social network platform. Discuss your findings.
+
+```{r q5, echo=T, warning=FALSE, results='asis'}
+data = read.csv("ads4.csv")
+data['Profit'] = data$adrevenue - data$adcost
+
+# Part a)
+my.bp <<-ggplot(data=data, aes(y= Profit, x=socialmedia, fill=mobile))
+my.bp <- my.bp + geom_boxplot()
+my.bp <- my.bp + ggtitle("Profits made by Social Media Ads w.r.t device") 
+my.bp <- my.bp +  ylab("Profit") + xlab("Social Media") 
+my.bp <- my.bp + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+my.bp
+
+mobile_customers = filter(data, mobile == "mobile")['Profit']
+mobile_customers_avg_profit = mean(as.numeric(unlist(mobile_customers)))
+computer_customers = filter(data, mobile == "computer")['Profit']
+computer_customers_avg_profit = mean(as.numeric(unlist(computer_customers)))
+
+d = data.frame(Profit=c(mobile_customers_avg_profit, computer_customers_avg_profit), Device=c("Mobile Customer", "Computer Customer"))
+ggplot(d, aes(x=Device, y=Profit, fill=Device)) +
+    geom_bar(stat='identity', position='dodge') + labs(title="Average Profit for Mobile/Computer Customers", x="Device", y="Avg Profit") + theme(plot.title=element_text(hjust=0.5, vjust=0.5, face='bold'))
+
+paste("Insight: Avg profit for computer is greater than avg profit for mobile which is mostly driven by youtube as 55% users (73) used computer driving max profit of 12.6. For tiktok, device of users affects average profits. Overall computer users are driving better average profit than mobile users")
+```
+
+```{r q5b1, echo=T, warning=FALSE}
+# Part b)
+# H0 - average profit for mobile is same as for computer for a social network platform
+# H1 - average profit for mobile is different than that of computer for a social network platform
+twitter_data = filter(data, socialmedia == "Twitter")
+instagram_data = filter(data, socialmedia == "Instagram")
+facebook_data = filter(data, socialmedia == "Facebook")
+tiktok_data = filter(data, socialmedia == "TikTok")
+youtube_data = filter(data, socialmedia == "YouTube")
+
+t.test(twitter_data[twitter_data$mobile == "mobile", ]$Profit, twitter_data[twitter_data$mobile == "computer", ]$Profit, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+t.test(instagram_data[instagram_data$mobile == "mobile", ]$Profit, instagram_data[instagram_data$mobile == "computer", ]$Profit, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+t.test(facebook_data[facebook_data$mobile == "mobile", ]$Profit, facebook_data[facebook_data$mobile == "computer", ]$Profit, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+t.test(tiktok_data[tiktok_data$mobile == "mobile", ]$Profit, tiktok_data[tiktok_data$mobile == "computer", ]$Profit, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+t.test(youtube_data[youtube_data$mobile == "mobile", ]$Profit, youtube_data[youtube_data$mobile == "computer", ]$Profit, paired=F, var.equal=F, alternative="greater", conf.level=0.95)
+```
+
+```{r q5b2, echo=T, warning=FALSE, results='asis'}
+paste("Insight: As can be seen from the observed results, being on a mobile phone/computer does not affect average profits for social network platform except Tiktok where p value is less than 0.05.")
+```
+
+Q6. It’s time to start understanding how profit depends on other variables, notably ad cost and age.
+
+a. Visualize the relationship between profit and age with different colored points for each social
+network. Make sure to label the plot (title, axes, legend), and comment on trends you observe.
+b. Visualize the relationship between profit and ad cost, again with different colored points for each
+social network. Make sure to label the plot (title, axes, legend), and comment on trends you
+observe.
+c. Are profit and age correlated? Perform an appropriate statistical test using Pearson correlation at
+the alpha = 0.05 significance level and comment on the results.
+d. Are profit and ad cost correlated? Perform an appropriate statistical test using Spearman correlation
+at the alpha = 0.05 significance level and comment on the results.
+e. Fit a linear regression to model the profit as a function of ad cost. Report the regression equation,
+a 90% confidence interval for the coefficient of ad cost, and the coefficient of determination.
+f. Fit a linear regression to model the profit as a function of ad cost and age. Comment on the
+results.
+g. At the alpha = 0.05 significance level, conduct an F-test to determine whether ad cost significantly
+predicts profit once we have accounted for age. R
+
+```{r q6, echo=T, warning=FALSE, results='asis'}
+data = read.csv("ads4.csv")
+data['profit'] = data$adrevenue - data$adcost
+
+# Part a)
+plot(data$age,data$profit,pch= 20,col = factor(data$socialmedia),main="Relationship between profit and age for each social network", xlab="Age", ylab="Profit")
+#Legend
+# Legend
+legend("bottomright",
+       legend = levels(factor(data$socialmedia)),
+       pch = 19,
+       col = factor(levels(factor(data$socialmedia))))
+
+
+#Insights for: 
+#a.Almost all TikTok users are younger than 25 years of age, with many being less than 20 years. 
+#b. YouTube has a wide age group of content creators, with many being the most profitable in the entire data set too.
+#c. YouTube content creators seemed to also suffer the most loss across all other categories and age groups. 
+
+
+# Part b)
+plot(data$adcost,data$profit,pch= 20,col = factor(data$socialmedia),main="Relationship between profit and adcost for each social network", xlab="AdCost", ylab="Profit")
+#Legend
+# Legend
+legend("bottomright",
+       legend = levels(factor(data$socialmedia)),
+       pch = 19,
+       col = factor(levels(factor(data$socialmedia))))
+
+
+#Insights: 
+#a. YouTube has more losses despite having high Ad Costs.
+#b. For other platforms, the AdCost is mostly limited between 0 to 10 at max.
+#c. For other platforms, the profit is mostly limited between 0 to 20 at max.
+#d. All Platforms have suffered with loss(<0 profit)
+```
+
+```{r q6c1, echo=T, warning=FALSE}
+# Part c)
+# H0 - profit and age are correlated
+# H1 - profit and age are not correlated
+cor.test( data$age,data$profit, method=c("pearson"))
+```
+
+```{r q6c2, echo=T, warning=FALSE, results='asis'}
+ggscatter(data, x = "age", y = "profit", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "Age", ylab = "Profit", title="ScatterPlot for Profit vs Age")
+
+
+paste("As Pearson correlation coefficient between profit and age is just 0.1162 and p-value = 0.01406, Age and Profit aren't that significantly correlated.")
+```
+
+```{r q6d1, echo=T, warning=FALSE}
+#Part d)
+# H0 - profit and adcost are correlated
+# H1 - profit and adcost are not correlated
+cor.test( data$adcost,data$profit, method=c("spearman"))
+```
+
+```{r q6d2, echo=T, warning=FALSE, results='asis'}
+ggscatter(data, x = "adcost", y = "profit", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "spearman",
+          xlab = "Ad Cost", ylab = "Profit", title="ScatterPlot for Profit vs AdCost")
+
+paste("As Spearman correlation coefficient between profit and adcost is just -0.02874 and p-value = 0.5449 which is greater than 0.05, thus we don't have significant evidence to conclude that profit and adcost are not colrrelated.")
+```
+
+```{r q6efg, echo=T, warning=FALSE}
+#Part e)
+model = lm(profit~adcost, data=data)
+summary(model)
+paste("Regression Equation: Profit = 2.75 + 0.3929 * AdCost")
+print("Confidence interval is:")
+confint(model, "adcost", level=0.90)
+paste("Coefficient of determination:",summary(model)$r.squared)
+
+#Part f)
+multi_model = lm(profit~adcost+age, data=data)
+summary(multi_model)
+paste("Regression Equation: Profit = 0.4509 + 0.3122 * AdCost + 0.1061 * age")
+paste("Coefficient of determination:",summary(multi_model)$r.squared)
+
+#Part g)
+# H0 - model with no independent variables fits the data as well as your model
+# H1 - model fits the data better than the intercept-only model
+anova(model, multi_model)
+print("Test statistic: 3.0822 ")
+print("P-value: 0.07985 ")
+```
+
+```{r q6g, echo=T, warning=FALSE, results='asis'}
+paste("Since the test statistic i.e. F  value is not significant with p-val as 0.07985, thus adding age to the model didn't perform better over the model with just adcost.")
+paste("In context to the problem, we can intrepret that adcost is a better indicator of profit than age.")
+```
+
