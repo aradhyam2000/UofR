@@ -1,0 +1,138 @@
+---
+title: "Team Members"
+author:
+ - Aradhya Mathur, 32384567
+ - Ayush Singla, 32280500
+ - Pradhyumna Rao, 32281507
+ - Richa Yadav, 32381047
+ - Rishabh Kandoi, 32384079
+output: 
+  pdf_document
+date: "2023-01-27"
+header-includes: 
+  - \renewcommand{\and}{\\}
+---
+
+```{r setup, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts = list(width.cutoff = 90), tidy = TRUE)
+```
+
+```{r imports, include=FALSE}
+#install.packages("lfe")
+#install.packages("data.table")
+library(lfe)
+library(data.table)
+```
+
+```{r init, echo=F, warning=FALSE}
+rm(list = ls());
+setwd("/Users/rishabhkandoi/Documents/Spring2023/PricingAnalytics/Assign1")
+cardata=fread("cars.csv",stringsAsFactors = F)
+ironore = fread("iron_ore.csv", stringsAsFactors = F)
+```
+
+\textbf{4. Control Variables}\newline
+
+\textbf{4.1 Interpreting a log-log regression}\newline
+
+\textbf{Q-1: What is the interpretation of the regression result (e.g. intercept and coefficient)?}\newline
+
+```{r 4.1-1, echo=T, warning=FALSE}
+reg=felm(log(qu)~log(eurpr), data=cardata)
+summary(reg)
+```
+
+\textbf{Ans: From the regression result above, we can interpret that the intercept is a high positive value, which denotes the demand when the Price is zero. This would be the scenario when product is given free of cost under some promotion per se, and thus would have the highest traction. Also, we can see that the price coefficient, that is beeta1, is a small negative value, which denotes that the increase in price would actually lead to decrease is demand. This is expected to be the ideal scenario as we will see in the graph and its explanation as well below.}\newline
+
+\textbf{Q-2: Does the shape of the estimated demand look reasonable? Why do you think so (not so)?}\newline
+
+```{r 4.1-2, echo=F, warning=FALSE}
+plot(y=log(cardata$qu),x=log(cardata$eurpr))
+abline(reg,col='red')
+```
+
+\textbf{Ans: The shape of the estimated demand looks reasonable for Price-Demand Relationship. We observe a negative slope, showing that as the price increases, the demand decreases.}\newline
+
+\textbf{Q-3: Is there any way to justify your statement?}\newline
+\textbf{Ans: From the plot we can see most of the data are cluttered in the centre. As we move away from the centre to the high end of Price, the demand decreases. Similarly, to the lower end of price, the demand is high. This explains the general behaviour of the customers buying the products, that as a customer observes increase in the price of a product, they will try to go for a cheaper alternative, and thus it would eventually decrease the demand for that product.}\newline
+
+\textbf{4.2 Adding control variables}\newline
+
+\textbf{Q-1: From the data, pick control variables and fixed effects to add to your regression, find your preferred specification and report results from that specification.}\newline
+
+```{r 4.2, echo=T, warning=FALSE}
+reg=felm(log(qu) ~ log(eurpr) + cy + hp + we + li + sp | factor(loc) + factor(cla), data=cardata)
+summary(reg)
+```
+
+\textbf{Ans: Shown above is the regression result after adding all the control variables and fixed effects in a consecutive manner until it was affecting beeta1 coefficient.}
+
+\textbf{Q-2: Justify your specification choice.}\newline
+\textbf{Ans: Those variables which contaminate the beeta1 coefficient and exhibit causal relationship between Price and Quantity are:}\newline
+\textbf{Control Variables chosen:}\newline
+\textbf{i) cy (cylinder volume):} Since larger cylinder would lead to increase in cost of the product, and thus the price would get affected.\newline
+\textbf{ii) hp (horsepower):} Since increase in horsepower would need stronger engine, this would lead to increase in cost of the product, and thus the price would get affected.\newline
+\textbf{iii) we (weight):} Since weight is directly related to the iron ore being used as raw material, so increasing weight would lead to increase in cost of the product, and thus the price would get affected.\newline
+\textbf{iv) li (avg of fuel efficiency):} Since increasing fuel efficiency would incur additional cost in designing and using better lubricants, it would lead to increase in cost of the product, and thus the price would get affected.\newline
+\textbf{v) sp (max speed):} Since increasing the max speed would require a change in the aerodynamics of the car body, along with various engine level and other upgrades, it would lead to increase in cost of the product, and thus the price would get affected.\newline
+\textbf{Fixed Effects chosen:}\newline
+\textbf{i) loc (location code):} Depending upon the location in which a particular car is being sold, the price of the car would be dependent upon whether the terrain, weather and local demand gets satisfied or not. \newline
+\textbf{ii) cla (class or segment code):} Depending upon the class or segment code of the car, the price would vary, although it won't be a direct factor of setting up the right price.\newline
+
+\textbf{5. Instrumental variables}\newline
+
+\textbf{Q-1: From the data, use a variable (or variables) that you find appropriate as an IV for the price and report results from that IV regression. How does the result change with and without IV?}\newline
+
+```{r 5, echo=T, warning=FALSE}
+reg=felm(log(qu) ~ 1 | factor(type) | (log(eurpr) ~ avgurprrival + nco + avdexr), data=cardata)
+summary(reg)
+```
+
+\textbf{Ans: As we saw earlier that without any IV, we got the beeta1 coefficient as -0.29, while with IV we got the beeta1 coefficient as -0.08, as shown above. This ensures that these variables are producing causal effect on demand, and thus should be included in the regression to reduce contamination of error term.}
+
+\textbf{Q-2: Justify your choice - why do you think it’s a good IV?}\newline
+\textbf{Ans: We selected the following IVs, by adding them consecutively and ensuring the causal relationship by observing significant change in beeta1 coefficient every time a variable was added:}\newline
+\textbf{i) avgurprrival (avg price of rival cars):} Change in the price of the rival cars would affect the decision making for setting up the optimal price for the observed car.\newline
+\textbf{ii) nco (number of rival cars):} Number of competitors would affect the market cap, and thus the pricing decision would get affected based upon the distribution of customers over all big players in the market.\newline
+\textbf{iii) avdexr (avg exchange rate of destination country):} If the exchange rate of a country weakens, it would adversely affect the import duty on the cars, and would change the price of the cars significantly. Even for a local car company, considering it would be generating profit by both domestic and export sale, it would directly get affected in terms of export sale, and thus the pricing decision.\newline
+\textbf{We wanted to add tax variable as well, because the percentage VAT affects the price of a product to the end customer and might affect their decision making in buying a product. But intuitively, tax component would be same for even rival cars, so it won't affect the overall market demand. This statement is supported by the regression equation as well, as adding tax variable didn't change the beeta1 coefficient, and thus does not show any causal relationship over demand.}\newline
+
+\textbf{6. Recovering costs}\newline
+
+\textbf{Q-1: Based on the insight above, estimate the unit cost of cars in the data.}\newline
+
+```{r 6, echo=T, warning=FALSE}
+# Complete regression equation, considering control variables, fixed effects and IVs
+reg=felm(log(qu) ~ cy + hp + we + li + sp | factor(loc) + factor(cla) + factor(type) | (log(eurpr) ~ tax + nco + avdexr), data=cardata)
+summary(reg)
+
+# Fetching beeta1 coefficient from the regression result
+beta1 = reg$beta[6]
+# Creating a new column "cost" in the cars dataset, and inserting cost estimation based upon beeta1 coefficient
+cardata$cost = cardata$avgurprrival * (1 + beta1) / beta1
+
+cardata[c(1,50,100,500,6000,10000),c(1,2,3,6,7,14,31,48,54,55)]
+```
+
+\textbf{Ans: We estimated the cost of all the cars, and as a sample, printed the cost for few of them as shown above. For the cost estimation, we used the beeta1 coefficient from the final regression equation as shown above, and used the avg rival price considering it as an optimal price to get the maximum profit.}
+
+\textbf{Q-2: Are the estimated costs reasonable? Why (why not)?}\newline
+\textbf{Ans: As we can see that the estimated cost is almost 0.9 times the optimal price (avg price of rival cars), which means lesser value, thus seems to be reasonable considering the fact that we don't have much information available about the other variable cost incurred by the car companies.}\newline
+
+\textbf{7. Cross-elasticities and competitive effects}\newline
+
+\textbf{Q-1: What does the coefficient of the log(avgeurprrival) represent? (Note that average rival price is the sum of rival prices divided by the number of rival car models.)}\newline
+
+```{r 7, echo=T, warning=FALSE}
+reg=felm(log(qu) ~ log(eurpr) + log(avgurprrival), data=cardata)
+summary(reg)
+```
+
+\textbf{Ans: On adding coefficent of log(avgurprrival) the beeta1 coefficient changes, indicating that there is no cross price elasticity effect, instead it is working as proxy for time-varying factor and thus showing causal relationship over the demand. It is observable, and is correlated with the contaminating error term. Including it in the regression improves beeta1 coefficient.}\newline
+
+\textbf{Q-2: What is the value of the coefficient you expect to get? Does your estimate fulfill your expectation?}\newline
+\textbf{Ans: Since we always expect a negative beeta1 coefficient as the case for ideal Price-Quantity relationship, we want an opposite realtionship with respect to rivals i.e. a positive coefficient. Here, the beeta1 coefficient we thus got was -1.05, while the coefficient for rival price was +1.19. Thus, with increase in price of the rival cars, it would increase demand of the observed car, which should be the ideal scenario as well.}\newline
+
+\textbf{Q-3: What does the estimated coefficient tell you about the competitiveness of the market?}\newline
+\textbf{Ans: As we saw that adding the rival price leads to establish a causal relationship instead of showing any cross-price elasticity effect, thus, both the prices are not substitutes to each other, therefore indicating both reacting to the same demand shock. Considering that the market would get competitive with increase in cross-price elasticity effect, we can thus conclude that the market is not competitive in this scenario. If we could study the price of each rival separately, we could give better insight as to what is the level of competitiveness in the market. But given only the average price of the rivals, this result holds true.}\newline
+

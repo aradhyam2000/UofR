@@ -1,0 +1,1066 @@
+---
+title: "Team Members"
+author:
+ - Aradhya Mathur, 32384567
+ - Ayush Singla, 32280500
+ - Pradhyumna Rao, 32281507
+ - Richa Yadav, 32381047
+ - Rishabh Kandoi, 32384079
+output: 
+  pdf_document
+date: "2023-02-09"
+header-includes: 
+  - \renewcommand{\and}{\\}
+---
+
+```{r setup, echo=T}
+knitr::opts_chunk$set(echo = TRUE, tidy.opts = list(width.cutoff = 90), tidy = TRUE)
+```
+
+```{r imports, include=F}
+#Load packages
+library("data.table")
+library("mlogit")
+library("gmnl")
+library("plotly") #Package for three dimensional plot
+```
+
+\textbf{3. Logit model without segmentation}\newline
+
+\textbf{3.1) Estimate the model and report the estimates. What do those coefficients mean?}\newline
+
+```{r 3-1, echo=T, warning=F}
+#Read data
+data=read.csv("kiwi_bubbles_P2.csv",stringsAsFactors = F)
+
+#Drop observations with stockout
+data=data[!(data$price.KB==99),]
+data=data[!(data$price.KR==99),]
+data=data[!(data$price.MB==99),]
+
+#Now columns 4 through 7 contains "Price.something" info.
+mlogitdata=mlogit.data(data,id="id",varying=4:7,choice="choice",shape="wide")
+
+#Run MLE.
+mle= gmnl(choice ~  price, data = mlogitdata)
+summary(mle)
+
+coef=mle$coefficients
+coef
+```
+
+\textbf{Ans: These coefficients suggest us the relationship between price and demand in the market. As seen above, the popularity of all three products are similar. Also, according to the price coefficient value, the market seems to be price sensitive since magnitude of beta1 coefficient is far away from zero.}\newline
+
+\textbf{3.2) Using the estimated parameters, calculate own- and cross-price elasticities for all combination of products, evaluated at the average prices observed in the data. Do you see any particular patterns? Are the patterns reasonable, or something you are concerned about? Explain why (why not).}\newline
+
+```{r 3-2-1, echo=T, warning=F}
+#demand=function(priceKB,priceKR,priceMB,para){
+#  probKB=exp(para[1]+para[3]*priceKB)/(1+exp(para[1]+para[3]*priceKB)+exp(para[2]+para[3]*priceKR)+exp(para[4]+para[3]*priceMB))
+#  probKR=exp(para[2]+para[3]*priceKR)/(1+exp(para[1]+para[3]*priceKB)+exp(para[2]+para[3]*priceKR)+exp(para[4]+para[3]*priceMB))
+#  probMB=exp(para[4]+para[3]*priceMB)/(1+exp(para[1]+para[3]*priceKB)+exp(para[2]+para[3]*priceKR)+exp(para[4]+para[3]*priceMB))
+#  return(cbind(probKB,probKR,probMB))
+#}
+
+demand=function(priceKB,priceKR,priceMB,para){
+  probKB=exp(para[1]+para[4]*priceKB)/(1+exp(para[1]+para[4]*priceKB)+exp(para[2]+para[4]*priceKR)+exp(para[3]+para[4]*priceMB))
+  probKR=exp(para[2]+para[4]*priceKR)/(1+exp(para[1]+para[4]*priceKB)+exp(para[2]+para[4]*priceKR)+exp(para[3]+para[4]*priceMB))
+  probMB=exp(para[3]+para[4]*priceMB)/(1+exp(para[1]+para[4]*priceKB)+exp(para[2]+para[4]*priceKR)+exp(para[3]+para[4]*priceMB))
+  
+  return(cbind(probKB,probKR,probMB))
+}
+
+para = c(coef[1],coef[2],coef[3],coef[4])
+demand_output = demand(mean(data$price.KB),mean(data$price.KR),mean(data$price.MB),para)
+data$probKB = demand_output[,1]
+data$probKR = demand_output[,2]
+data$probMB = demand_output[,3]
+elasticity_KB = coef[4] * mean(data$price.KB)*(1-demand_output[,1])
+elasticity_KR = coef[4] * mean(data$price.KR)*(1-demand_output[,2])
+elasticity_MB = coef[4] * mean(data$price.MB)*(1-demand_output[,3])
+
+#Validate logic of multi-product cross elasticity
+cross_elasticity_KB = - coef[4] * mean(data$price.KB)*(demand_output[,1]) 
+cross_elasticity_KR = - coef[4] * mean(data$price.KR)*(demand_output[,2]) 
+cross_elasticity_MB = - coef[4] * mean(data$price.MB)*(demand_output[,3]) 
+
+KB_KR = cross_elasticity_KR
+KB_MB = cross_elasticity_MB
+KR_MB = cross_elasticity_MB
+
+KR_KB = cross_elasticity_KB
+MB_KB = cross_elasticity_KB
+MB_KR = cross_elasticity_KR
+
+KB_KB = elasticity_KB
+KR_KR = elasticity_KR
+MB_MB = elasticity_MB
+
+rownames = c("KB", "KR", "MB")
+colnames = c("KB", "KR", "MB")
+
+P <- matrix(c(KB_KB, KB_KR, KB_MB , KR_KB ,KR_KR, KR_MB , MB_KB , MB_KR, MB_MB), nrow = 3, byrow = TRUE, dimnames = list(rownames, colnames))
+print(P)
+
+```
+
+\textbf{Ans: From the values of cross-price elasticities seen in the matrix above, the alues are very close to each other, and thus when there is one percent change in price of own product then percent changes of choice probablity among both rivals are same. Similarly, since own price elasticity values are also very close to each other, demand of all products reacts in same amount when there is one percent change in the price of each of the products.}\newline
+
+\textbf{3.3) Calculate optimal prices for KB and KR (note that you have two products) to maximize the
+profit when Mango price is PMB = 1.43.}\newline
+
+```{r 3-3-1, echo=F, warning=F}
+# pricespace=seq(0,3,0.001)
+# #Probability of purchase for KR
+# plot(pricespace,demand(mean(data$price.KB),pricespace,1.43,para)[,2],type='l',xlab='Prices',     ylab='Probability of purchase',col="blue",lwd=2
+#      ,cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+# uc = 0.5 #unit cost mentioned
+# #finding optimal price for KR
+# profit=1000*((demand(mean(data$price.KB),pricespace,1.43,para)[,2])*pricespace-demand(mean(data$price.KB),pricespace,1.43,para)[,2]*uc)
+# plot(pricespace,profit,type='l',xlab='Prices',
+#      ylab='Profit',ylim=c(10,300),col="blue",lwd=2,
+#      cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+# pricespace[profit==max(profit)]
+# coef
+```
+
+```{r 3-2-2, echo=F, warning=F}
+# pricespace1 =seq(0.7,3,0.01)
+# pricespace2 =seq(0.7,3,0.01)
+# #Probability of purchase for KB
+# 
+# plot(pricespace1,demand(pricespace1,pricespace2, 1.43,para)[,1],type='l',xlab='Prices',     ylab='Probability of purchase',col="blue",lwd=2
+#      ,cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+# 
+# 
+# 
+# uc = 0.5 #unit cost mentioned
+#finding optimal price for KB
+```
+
+
+```{r 3-2-3, echo=T, warning=F}
+pricespace1 =seq(0.7,3,0.01)
+pricespace2 =seq(0.7,3,0.01)
+profit_matrix = matrix(, nrow = 231, ncol = 231)
+pricespace1_ind = 1
+pricespace2_ind = 0
+max = 0 
+uc = 0.5
+for (iter in pricespace1){
+  iter_row = c()
+  for (iter2 in pricespace2){
+    profit_KB=(1000*((demand(iter,iter2,1.43,para)[,1])*iter
+                 -demand(iter,iter2,1.43,para)[,1]*uc))
+    profit_KR=(1000*((demand(iter,iter2,1.43,para)[,2])*iter2
+                 -demand(iter,iter2,1.43,para)[,2]*uc))
+    profit_total  = profit_KB + profit_KR
+    iter_row = append(iter_row, profit_total)
+    
+  }
+  
+  profit_matrix[pricespace1_ind,] = iter_row
+  pricespace1_ind = pricespace1_ind + 1
+}
+
+pricespace_ind = which(profit_matrix == max(profit_matrix), arr.ind = TRUE)
+paste("Max profit is ", max(profit_matrix), " at price of KB=", pricespace1[pricespace_ind[1]], " and price of KR=", pricespace2[pricespace_ind[2]], sep="")
+```
+
+\textbf{Ans: Max profit is 393.408204542004 at price of KB=1.16 and price of KR=1.16}\newline
+
+\textbf{4. Logit model with segmentation}\newline
+
+\textbf{4.1) Like what we did in the lecture, group consumers into segments using ”kmeans” function. You may use all columns from the demographic data to do clustering. Then estimate multinomial logit model separately for each segment of consumers. I would recommend number of clusters larger than 7 to find meaningful segmentation (but not too large - if you have too many segments you’d start seeing a segment with like only two people in it. Stop adding segments before you get there). Report your estimates.}\newline
+
+```{r 4-1-1, echo=T, warning=F}
+# 8 clusters
+
+#Load demographic data
+demo=read.csv("demo_P2.csv",stringsAsFactors = F)
+#Clustering
+demo_cluster = kmeans(x=demo[, 2:18], centers = 7, nstart = 1000)
+demo_cluster
+
+#now combine cluster identity into the raw data
+cluster_id = data.frame(id = demo$id)
+cluster_id$cluster = demo_cluster$cluster
+kmeans_data = merge(data, cluster_id, by = "id", all.x = T)
+
+# for those who don't fit in any cluster, group them into one additional cluster
+kmeans_data$cluster[is.na(kmeans_data$cluster)] = 8
+
+# just store the coefficients (you can store many other things)
+coef_est_8 = data.frame(segment = 1:8, intercept.KB = NA, intercept.KR = NA, 
+                    intercept.MB = NA, price.coef = NA) 
+#Write a for-loop. 
+for (seg in 1:8) {
+  # During each loop, pick subset of data of consumers from each segment.
+  data.sub = subset(kmeans_data, cluster == seg)
+  
+  #Using that data, the rest remains the same.
+  mlogitdata=mlogit.data(data.sub,id="id",varying=4:7,choice="choice",shape="wide")
+  
+  #Run MLE.
+  mle= gmnl(choice ~  price, data = mlogitdata)
+  mle
+  #Store the outcome in the coef.est matrix.
+  coef_est_8[seg, 2:5] = mle$coefficients
+}
+coef_est_8
+```
+```{r 4-1-2, echo=T, warning=F}
+# 9 clusters
+
+#Load demographic data
+demo=read.csv("demo_P2.csv",stringsAsFactors = F)
+#Clustering
+demo_cluster = kmeans(x=demo[, 2:18], centers = 8, nstart = 1000)
+demo_cluster
+
+#now combine cluster identity into the raw data
+cluster_id = data.frame(id = demo$id)
+cluster_id$cluster = demo_cluster$cluster
+kmeans_data = merge(data, cluster_id, by = "id", all.x = T)
+
+# for those who don't fit in any cluster, group them into one additional cluster
+kmeans_data$cluster[is.na(kmeans_data$cluster)] = 9
+
+# just store the coefficients (you can store many other things)
+coef_est_9 = data.frame(segment = 1:9, intercept.KB = NA, intercept.KR = NA, 
+                    intercept.MB = NA, price.coef = NA) 
+#Write a for-loop. 
+for (seg in 1:9) {
+  # During each loop, pick subset of data of consumers from each segment.
+  data.sub = subset(kmeans_data, cluster == seg)
+  
+  #Using that data, the rest remains the same.
+  mlogitdata=mlogit.data(data.sub,id="id",varying=4:7,choice="choice",shape="wide")
+  
+  #Run MLE.
+  mle= gmnl(choice ~  price, data = mlogitdata)
+  mle
+  #Store the outcome in the coef.est matrix.
+  coef_est_9[seg, 2:5] = mle$coefficients
+}
+coef_est_9
+```
+
+
+```{r 4-1-3, echo=T, warning=F}
+# 11 clusters
+
+#Load demographic data
+demo=read.csv("demo_P2.csv",stringsAsFactors = F)
+#Clustering
+demo_cluster = kmeans(x=demo[, 2:18], centers = 10, nstart = 1000)
+demo_cluster
+
+#now combine cluster identity into the raw data
+cluster_id = data.frame(id = demo$id)
+cluster_id$cluster = demo_cluster$cluster
+kmeans_data = merge(data, cluster_id, by = "id", all.x = T)
+
+# for those who don't fit in any cluster, group them into one additional cluster
+kmeans_data$cluster[is.na(kmeans_data$cluster)] = 11
+
+# just store the coefficients (you can store many other things)
+coef_est_11 = data.frame(segment = 1:11, intercept.KB = NA, intercept.KR = NA, 
+                    intercept.MB = NA, price.coef = NA) 
+#Write a for-loop. 
+for (seg in 1:11) {
+  # During each loop, pick subset of data of consumers from each segment.
+  data.sub = subset(kmeans_data, cluster == seg)
+  
+  #Using that data, the rest remains the same.
+  mlogitdata=mlogit.data(data.sub,id="id",varying=4:7,choice="choice",shape="wide")
+  
+  #Run MLE.
+  mle= gmnl(choice ~  price, data = mlogitdata)
+  mle
+  #Store the outcome in the coef.est matrix.
+  coef_est_11[seg, 2:5] = mle$coefficients
+}
+coef_est_11
+```
+
+
+```{r 4-1-4, echo=T, warning=F}
+# 10 clusters
+
+#Load demographic data
+demo=read.csv("demo_P2.csv",stringsAsFactors = F)
+#Clustering
+demo_cluster = kmeans(x=demo[, 2:18], centers = 9, nstart = 1000)
+demo_cluster
+
+#now combine cluster identity into the raw data
+cluster_id = data.frame(id = demo$id)
+cluster_id$cluster = demo_cluster$cluster
+kmeans_data = merge(data, cluster_id, by = "id", all.x = T)
+
+# for those who don't fit in any cluster, group them into one additional cluster
+kmeans_data$cluster[is.na(kmeans_data$cluster)] = 10
+
+# just store the coefficients (you can store many other things)
+coef_est_10 = data.frame(segment = 1:10, intercept.KB = NA, intercept.KR = NA, 
+                    intercept.MB = NA, price.coef = NA) 
+#Write a for-loop. 
+for (seg in 1:10) {
+  # During each loop, pick subset of data of consumers from each segment.
+  data.sub = subset(kmeans_data, cluster == seg)
+  
+  #Using that data, the rest remains the same.
+  mlogitdata=mlogit.data(data.sub,id="id",varying=4:7,choice="choice",shape="wide")
+  
+  #Run MLE.
+  mle= gmnl(choice ~  price, data = mlogitdata)
+  mle
+  #Store the outcome in the coef.est matrix.
+  coef_est_10[seg, 2:5] = mle$coefficients
+}
+coef_est_10
+```
+
+
+\textbf{Ans: So after trying multiple number of clusters, we came to the conclusion that segmentation with 10 clusters (including the remaining cluster after kmeans) divides the data upto 4 consumers in a segment, and thus we would choose not to move further with more number of segments.}\newline
+
+\textbf{Below are the segment share thus found, for 10 clusters}\newline
+
+```{r 4-2-1, echo=T, warning=F}
+# segment share
+N = 359
+seg.share = c(demo_cluster$size, N-sum(demo_cluster$size)) / N	
+seg.share
+```
+
+\textbf{4.2) At the average prices observed in the data, what are the market-level (aggregated across segments) own- and cross- elasticities among these products? How does it differ from the no-segmentation case? Which products are closer substitutes and which products are not as close substitutes?}\newline
+
+\textbf{Ans: For this, we would go with formula based apprach, as shown below.}
+
+```{r 4-2-2, echo=T, warning=F}
+#finding own-elasticities 
+#finding elasticity of KB
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,1]
+  value_temp = value_temp +( w * beta_1 * prob_temp * (1 - prob_temp))
+  value_temp_prob = value_temp_prob + (w*prob_temp)
+}
+KB_elasticity = (mean(kmeans_data$price.KB)*value_temp)/value_temp_prob
+
+#finding elasticity of KR
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,2]
+  value_temp = value_temp +( w * beta_1 * prob_temp * (1 - prob_temp))
+  value_temp_prob = value_temp_prob + (w*prob_temp)
+}
+KR_elasticity = (mean(kmeans_data$price.KR)*value_temp)/value_temp_prob
+
+#finding elasticity of MB
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,3]
+  value_temp = value_temp +( w * beta_1 * prob_temp * (1 - prob_temp))
+  value_temp_prob = value_temp_prob + (w*prob_temp)
+}
+MB_elasticity = (mean(kmeans_data$price.MB)*value_temp)/value_temp_prob
+```
+
+```{r 4-2-3, echo=T, warning=F}
+# Cross Price elasticity of KB-KR
+
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp_KB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,1]
+  prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,2]
+  value_temp = value_temp +( w * beta_1 * prob_temp_KB * prob_temp_KR)
+  value_temp_prob = value_temp_prob + (w*prob_temp_KB)
+}
+KB_KR_elasticity = -(mean(kmeans_data$price.KR)*value_temp)/value_temp_prob
+
+# Cross Price elasticity of KB-MB
+
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp_KB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,1]
+  prob_temp_MB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,3]
+  value_temp = value_temp +( w * beta_1 * prob_temp_KB * prob_temp_MB)
+  value_temp_prob = value_temp_prob + (w*prob_temp_KB)
+}
+KB_MB_elasticity = -(mean(kmeans_data$price.MB)*value_temp)/value_temp_prob
+
+# Cross Price elasticity of KR-KB
+
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,2]
+  prob_temp_KB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,1]
+  value_temp = value_temp +( w * beta_1 * prob_temp_KR * prob_temp_KB)
+  value_temp_prob = value_temp_prob + (w*prob_temp_KR)
+}
+KR_KB_elasticity = -(mean(kmeans_data$price.KB)*value_temp)/value_temp_prob
+
+# Cross Price elasticity of KR-MB
+
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,2]
+  prob_temp_MB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,3]
+  value_temp = value_temp +( w * beta_1 * prob_temp_KR * prob_temp_MB)
+  value_temp_prob = value_temp_prob + (w*prob_temp_KR)
+}
+KR_MB_elasticity = -(mean(kmeans_data$price.MB)*value_temp)/value_temp_prob
+
+# Cross Price elasticity of MB-KB
+
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp_MB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,3]
+  prob_temp_KB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,1]
+  value_temp = value_temp +( w * beta_1 * prob_temp_MB * prob_temp_KB)
+  value_temp_prob = value_temp_prob + (w*prob_temp_MB)
+}
+MB_KB_elasticity = -(mean(kmeans_data$price.KB)*value_temp)/value_temp_prob
+
+# Cross Price elasticity of MB-KR
+
+value_temp = 0
+value_temp_prob = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  beta_1 = coef_est_10[i,5]
+  prob_temp_MB = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,3]
+  prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster == i,]$price.KB),mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),mean(kmeans_data[kmeans_data$cluster == i,]$price.MB),coef_est_10[i,2:5])[,2]
+  value_temp = value_temp +( w * beta_1 * prob_temp_MB * prob_temp_KR)
+  value_temp_prob = value_temp_prob + (w*prob_temp_MB)
+}
+MB_KR_elasticity = -(mean(kmeans_data$price.KR)*value_temp)/value_temp_prob
+
+
+KB_KB_elasticity = KB_elasticity
+KR_KR_elasticity = KR_elasticity
+MB_MB_elasticity = MB_elasticity
+
+rownames = c("KB", "KR", "MB")
+colnames = c("KB", "KR", "MB")
+
+P <- matrix(c(KB_KB_elasticity, KB_KR_elasticity, KB_MB_elasticity , KR_KB_elasticity ,KR_KR_elasticity, KR_MB_elasticity , MB_KB_elasticity , MB_KR_elasticity, MB_MB_elasticity), nrow = 3, byrow = TRUE, dimnames = list(rownames, colnames))
+print(P)
+
+# In comparison with the no segmentation case, price sensitivity is getting reduced when introducing segmentation
+# Confirm about closer substitute being inferred using cross-price elasticity among combinations in matrix only?
+```
+
+\textbf{Ans: So as seen above, Own-price elasticity of KB and MB is larger while that of KR is smaller. Cross-price elasticity between KB and KR is a lot smaller, while that of KB and MG is larger. By doing segmentation, we can clearly see the substitution effect among products.}\newline
+\textbf{After segmentation, the average cross elasticity between KB and MB is the largest, which means that they are closer substitutes. The cross elasticity between MB and KR is the smallest, so they are not as close substitutes. Therefore, launching KB has a strong impact on our competitor, and the cannibalization effect of launching KB on KR is not a big issue since the cross price elasticity between KB and KR is smaller than 1.}
+
+\textbf{4.3) Discuss the preference of the segments you found (who prefers KB over KR, who is more price sensitive, etc.). How does the underlying customer segmentation explain the substitution pattern you see in the elasticity? From the elasticity and underlying segmentation you found, where (i.e. which segment(s)) do you suggest that Kiwi Bubbles should be positioned?}\newline
+
+```{r 4-3, echo=T, warning=F}
+
+# KB-KR
+coef.est = coef_est_10
+plot(coef.est[1,2]-coef.est[1,3],coef.est[1,5],cex=20*seg.share[1],xlim=c(-4,4),ylim=c(-7,0.5),
+     col = "bisque",pch=16,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5,
+     xlab="beta_0^KB-beta_0^KR",ylab=("beta_1"))
+points(coef.est[2,2]-coef.est[2,3],coef.est[2,5],cex=20*seg.share[2],col = "pink",pch=16)
+points(coef.est[3,2]-coef.est[3,3],coef.est[3,5],cex=20*seg.share[3],col = "red",pch=16)
+points(coef.est[4,2]-coef.est[4,3],coef.est[4,5],cex=20*seg.share[4],col = "blue",pch=16)
+points(coef.est[5,2]-coef.est[5,3],coef.est[5,5],cex=20*seg.share[5],col = "yellow",pch=16)
+points(coef.est[6,2]-coef.est[6,3],coef.est[6,5],cex=20*seg.share[6],col = "black",pch=16)
+points(coef.est[7,2]-coef.est[7,3],coef.est[7,5],cex=20*seg.share[7],col = "green",pch=16)
+points(coef.est[8,2]-coef.est[8,3],coef.est[8,5],cex=20*seg.share[8],col = "grey",pch=16)
+points(coef.est[9,2]-coef.est[9,3],coef.est[9,5],cex=20*seg.share[9],col = "chocolate",pch=16)
+points(coef.est[10,2]-coef.est[10,3],coef.est[10,5],cex=20*seg.share[10],col = "orange",pch=16)
+
+# KB-MB
+coef.est = coef_est_10
+plot(coef.est[1,2]-coef.est[1,4],coef.est[1,5],cex=20*seg.share[1],xlim=c(-3,3),ylim=c(-7,-0.5),
+     col = "bisque",pch=16,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5,
+     xlab="beta_0^KB-beta_0^MB",ylab=("beta_1"))
+points(coef.est[2,2]-coef.est[2,4],coef.est[2,5],cex=20*seg.share[2],col = "pink",pch=16)
+points(coef.est[3,2]-coef.est[3,4],coef.est[3,5],cex=20*seg.share[3],col = "red",pch=16)
+points(coef.est[4,2]-coef.est[4,4],coef.est[4,5],cex=20*seg.share[4],col = "blue",pch=16)
+points(coef.est[5,2]-coef.est[5,4],coef.est[5,5],cex=20*seg.share[5],col = "yellow",pch=16)
+points(coef.est[6,2]-coef.est[6,4],coef.est[6,5],cex=20*seg.share[6],col = "black",pch=16)
+points(coef.est[7,2]-coef.est[7,4],coef.est[7,5],cex=20*seg.share[7],col = "green",pch=16)
+points(coef.est[8,2]-coef.est[8,4],coef.est[8,5],cex=20*seg.share[8],col = "grey",pch=16)
+points(coef.est[9,2]-coef.est[9,4],coef.est[9,5],cex=20*seg.share[9],col = "chocolate",pch=16)
+points(coef.est[10,2]-coef.est[10,4],coef.est[10,5],cex=20*seg.share[10],col = "orange",pch=16)
+
+# KR-MB
+coef.est = coef_est_10
+plot(coef.est[1,3]-coef.est[1,4],coef.est[1,5],cex=20*seg.share[1],xlim=c(-3,3),ylim=c(-7,-0.5),
+     col = "bisque",pch=16,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5,
+     xlab="beta_0^KR-beta_0^MB",ylab=("beta_1"))
+points(coef.est[2,3]-coef.est[2,4],coef.est[2,5],cex=20*seg.share[2],col = "pink",pch=16)
+points(coef.est[3,3]-coef.est[3,4],coef.est[3,5],cex=20*seg.share[3],col = "red",pch=16)
+points(coef.est[4,3]-coef.est[4,4],coef.est[4,5],cex=20*seg.share[4],col = "blue",pch=16)
+points(coef.est[5,3]-coef.est[5,4],coef.est[5,5],cex=20*seg.share[5],col = "yellow",pch=16)
+points(coef.est[6,3]-coef.est[6,4],coef.est[6,5],cex=20*seg.share[6],col = "black",pch=16)
+points(coef.est[7,3]-coef.est[7,4],coef.est[7,5],cex=20*seg.share[7],col = "green",pch=16)
+points(coef.est[8,3]-coef.est[8,4],coef.est[8,5],cex=20*seg.share[8],col = "grey",pch=16)
+points(coef.est[9,3]-coef.est[9,4],coef.est[9,5],cex=20*seg.share[9],col = "chocolate",pch=16)
+points(coef.est[10,3]-coef.est[10,4],coef.est[10,5],cex=20*seg.share[10],col = "orange",pch=16)
+
+
+# For KB, we should target segment 9 (chocolate colour in graph)
+
+```
+\textbf{Ans: Inferences from the graphs above:}\newline
+\textbf{a) Among KB-KR, customers from segment 1 are loyal towards product KB, but are very price sensitive, which is visible from the other graphs since segment customers seems to have no preference for any product in other two graphs.}\newline
+\textbf{b) Consumers in segment 5,6 and 8 are very loyal towards product KR and are less price senitive as well.}\newline
+\textbf{c) Consumers from segment 3 and 4 seems to be very loyal towards product MB, but are quite price sensitive as well.}\newline
+\textbf{d) The biggest segment 10 shows slight preference for product KB.}\newline
+\textbf{e) Other segments, 2, 7 and 9 have consumers with no preference for any single product.}\newline
+
+\textbf{So, as observed from the inferences above, product KB, i,e, Kiwi Bubble should be positioned in the segment 1, 10. Segment 10 being the biggest as well, holds a good number of consumers to generate maximum profit.}\newline
+
+\textbf{To justify your suggestion, compare profits with and without Kiwi Bubbles. Assume for now that Mango Bubbles is priced at $1.43 and does not react to Kiwi’s pricing. First, assume that you decided not to launch Kiwi Bubbles. What is the optimal price of Kiwi Regular, and what is Kiwi and Mango’s profit? Next, assume that you do launch Kiwi Bubbles. What are the optimal prices for Kiwi Regular and Kiwi Bubbles? How does the profit of Kiwi and Mango change as Kiwi launches KB? Does your result justify the launch of KB, and if so, does it support your positioning suggestions in the previous question?}\newline
+
+
+```{r 4-4-1, echo=T, warning=F}
+
+#Demand function without consideration of KB 
+demand_q4=function(priceKR,priceMB,para){
+  probKR=exp(para[2]+para[4]*priceKR)/(1+exp(para[2]+para[4]*priceKR)+exp(para[3]+para[4]*priceMB))
+  probMB=exp(para[3]+para[4]*priceMB)/(1+exp(para[2]+para[4]*priceKR)+exp(para[3]+para[4]*priceMB))
+  return(cbind(probKR,probMB))}
+
+pricespace3 = seq(0.6,3,0.01)
+profit_KR = 0
+profit_MB = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_temp_KR = demand_q4(pricespace3,1.43,as.numeric(coef_est_10[i,2:5]))[,1]
+  #prob_temp_MB = demand_q4(mean(kmeans_data[kmeans_data$cluster == i,]$price.KR),1.43,coef_est_10[i,2:5])[,2]
+  num_customer = seg.share[i]*1000
+  profit_KR = profit_KR+ num_customer*prob_temp_KR * (pricespace3 - uc)
+  #profit_MB = profit_MB+ num_customer*prob_temp_MB * (1.43 - uc)
+}
+plot(pricespace3,profit_KR,type='l',xlab='Prices',
+     ylab='Profit',ylim=c(10,500),col="blue",lwd=2,
+     cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_temp_MB = demand_q4(pricespace3[profit_KR==max(profit_KR)],1.43,as.numeric(coef_est_10[i,2:5]))[,2]
+  num_customer = seg.share[i]*1000
+  profit_MB = profit_MB+ num_customer*prob_temp_MB * (1.43 - uc)
+}
+
+paste("Profit of KR without KB is ", max(profit_KR), "at price ", pricespace3[profit_KR==max(profit_KR)])
+paste("Profit of MB without KB is ", profit_MB, "at price ", 1.43)
+```
+
+
+```{r 4-4-2, echo=T, warning=F}
+#finding demand considering KB too
+
+pricespace3 = seq(0.6,3,0.01)
+pricespace1 = seq(0.6,3,0.01)
+pricespace2 = seq(0.6,3,0.01)
+profit_KR = 0
+profit_MB = 0
+profit_KB = 0
+
+
+profit_matrix = matrix(, nrow = length(pricespace1), ncol = length(pricespace2))
+pricespace1_ind = 1
+pricespace2_ind = 0
+
+for (iter in pricespace1){
+  iter_row = c()
+  for (iter2 in pricespace2){
+      profit_KR = 0
+      profit_KB = 0
+      for(i in (1:length(seg.share))){
+        w = seg.share[i]
+        prob_temp_KB = demand(iter,iter2,1.43,as.numeric(coef_est_10[i,2:5]))[,1]
+        num_customer = seg.share[i]*1000
+        profit_KB = profit_KB + num_customer*prob_temp_KB * (iter - uc)
+        #print("--")
+        #print(profit_KB)
+        prob_temp_KR = demand(iter,iter2,1.43,as.numeric(coef_est_10[i,2:5]))[,2]
+        profit_KR = profit_KR + num_customer*prob_temp_KR * (iter2 - uc)
+        #print("**")
+        #print(profit_KR)
+      }
+    profit_total  = profit_KB + profit_KR
+    #print("++")
+    #print(profit_total)
+    iter_row = append(iter_row, profit_total)
+    profit_total  = 0
+  }
+    profit_matrix[pricespace1_ind,] = iter_row
+    pricespace1_ind = pricespace1_ind + 1
+}
+
+```
+
+
+```{r 4-4-3, echo=T, warning=F}
+#finding actual optimal prices of KB and KR: KB is in rows; KR is in columns
+max_profit_indices = which(profit_matrix == max(profit_matrix), arr.ind = TRUE)
+(pricespace1[max_profit_indices[1]])
+(pricespace2[max_profit_indices[2]])
+max(profit_matrix)
+paste("After considering KB, the optimal price of KB=", pricespace1[max_profit_indices[1]], " and optimal price for KR=", pricespace2[max_profit_indices[2]], " with total maximum profit=", max(profit_matrix), sep="")
+```
+
+
+
+```{r 4-4-4, echo=T, warning=F}
+#to find the optimal price of MB, used the optimal prices of KB and KR and added the profit of MB for each segment
+profit_MB = 0 
+profit_KR = 0
+profit_KB = 0
+prob_temp_MB = 0
+prob_temp_KR = 0
+prob_temp_KB = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_temp_MB = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],1.43,as.numeric(coef_est_10[i,2:5]))[,3]
+  prob_temp_KR = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],1.43,as.numeric(coef_est_10[i,2:5]))[,2]
+  prob_temp_KB = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],1.43,as.numeric(coef_est_10[i,2:5]))[,1]
+  num_customer = seg.share[i]*1000
+  profit_MB = profit_MB+ num_customer*prob_temp_MB * (1.43 - uc)
+  profit_KR = profit_KR+ num_customer*prob_temp_KR * (pricespace2[max_profit_indices[2]] - uc)
+  profit_KB = profit_KB+ num_customer*prob_temp_KB * (pricespace2[max_profit_indices[1]] - uc)
+}
+
+paste("Profit of KB is ", profit_KB, " at price ", pricespace2[max_profit_indices[1]])
+paste("Profit of KR with KB is ", profit_KR, "at price ", pricespace2[max_profit_indices[2]])
+paste("Profit of MB with KB is ", profit_MB, "at price ", 1.43)
+paste("Profit of KB+KR is ", profit_KB+profit_KR)
+
+# So after the launch of KB, profit for both KR and MB reduces
+```
+
+\textbf{Thus, launching of KB increases total profit of the company and reduces profit of MB.}\newline
+\textbf{If we do not launch kiwi bubble, 3 segments prefer Mango Bubble, and other segments prefer Kiwi Regular. After we launch Kiwi Bubble, because Kiwi Bubble and Mango Bubble are closer substitutes, only 1 segment would still be attracted by Mango Bubble, and we get customers in the other 2 segments to buy our newly launched Kiwi Bubble. Therefore, the market share of our products will increase when we launch Kiwi Bubble, resulting in a higher profit.}\newline
+
+\textbf{5. Understanding strategic responses}\newline
+
+\textbf{5.1) First, solve Mango’s optimal pricing problem, given that Kiwi’s price is the one you set from the previous section. What is the new price of MB?}\newline
+
+
+```{r 5-1-1, echo=T, warning=F}
+
+#Question 5.1
+pricespace4 = seq(0.6,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],pricespace4,as.numeric(coef_est_10[i,2:5]))[,3]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB * (pricespace4 - uc)
+}
+pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+plot(pricespace4,profit_MB_q5,type='l',xlab='Prices',
+     ylab='Profit',ylim=c(10,300),col="blue",lwd=2,
+     cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+
+paste("Max Profit of MB=", max(profit_MB_q5), " at price=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], sep="")
+```
+
+\textbf{5.2) As Kiwi, you need to react to Mango’s new price. Set prices for KR and KB to respond to the new price of Mango Bubble that we just derived. What is your new price for KR and KB?}\newline
+
+```{r 5-2, echo=T, warning=F}
+#question 5.2: adjusting kr and kb prices according to the latest change in price of MB 
+pricespace3 = seq(0.5,3,0.01)
+pricespace1 = seq(0.5,3,0.01)
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+profit_MB = 0
+profit_KB = 0
+
+
+profit_matrix = matrix(, nrow = length(pricespace1), ncol = length(pricespace2))
+pricespace1_ind = 1
+pricespace2_ind = 0
+
+for (iter in pricespace1){
+  iter_row = c()
+  for (iter2 in pricespace2){
+      profit_KR = 0
+      profit_KB = 0
+      for(i in (1:length(seg.share))){
+        w = seg.share[i]
+        prob_temp_KB = demand(iter,mean(kmeans_data[kmeans_data$cluster==i,]$price.KR),pricespace4[profit_MB_q5 == max(profit_MB_q5)],as.numeric(coef_est_10[i,2:5]))[,1]
+        num_customer = seg.share[i]*1000
+        profit_KB = profit_KB + num_customer*prob_temp_KB * (iter - uc)
+        #print("--")
+        #print(profit_KB)
+        prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster==i,]$price.KB),iter2,pricespace4[profit_MB_q5 == max(profit_MB_q5)],as.numeric(coef_est_10[i,2:5]))[,2]
+        profit_KR = profit_KR + num_customer*prob_temp_KR * (iter2 - uc)
+        #print("**")
+        #print(profit_KR)
+      }
+    profit_total  = profit_KB + profit_KR
+    #print("++")
+    #print(profit_total)
+    iter_row = append(iter_row, profit_total)
+    profit_total  = 0
+  }
+    profit_matrix[pricespace1_ind,] = iter_row
+    pricespace1_ind = pricespace1_ind + 1
+}
+```
+
+
+```{r 5-3-1, echo=T, warning=F}
+#finding actual optimal prices of KB and KR: KB is in rows; KR is in columns
+max_profit_indices = which(profit_matrix == max(profit_matrix), arr.ind = TRUE)
+
+paste("New price for KB=", (pricespace1[max_profit_indices[1]]), " and KR=", (pricespace1[max_profit_indices[2]]), " with maximum profit of ", max(profit_matrix), sep="")
+```
+
+
+\textbf{5.3) Repeat the previous two steps iteratively, until neither Kiwi nor Mango has an incentive to set a different price (you can be as accurate as one cent, but no need to be more accurate than that). These set of prices are the new “equilibrium price” where you and Mango compete with each other. Please report the sequence of prices until you reach here.}\newline
+
+```{r 5-3-2, echo=T, warning=F}
+#Question 5.3
+
+# After launch of KB
+
+pricespace4 = seq(0.5,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],pricespace4,as.numeric(coef_est_10[i,2:5]))[,3]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB*(pricespace4 - uc)
+}
+
+paste("After launch of KB, with KB=", pricespace1[max_profit_indices[1]], " and KR=", pricespace1[max_profit_indices[2]], " profit of MB=", max(profit_MB_q5), " at price=", pricespace4[profit_MB_q5 == max(profit_MB_q5)])
+
+pricespace3 = seq(0.5,3,0.01)
+pricespace1 = seq(0.5,3,0.01)
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+profit_MB = 0
+profit_KB = 0
+
+
+profit_matrix = matrix(, nrow = length(pricespace1), ncol = length(pricespace2))
+pricespace1_ind = 1
+pricespace2_ind = 0
+
+for (iter in pricespace1){
+  iter_row = c()
+  for (iter2 in pricespace2){
+      profit_KR = 0
+      profit_KB = 0
+      a = pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+      for(i in (1:length(seg.share))){
+        w = seg.share[i]
+        prob_temp_KB = demand(iter,mean(kmeans_data[kmeans_data$cluster==i,]$price.KR),a,as.numeric(coef_est_10[i,2:5]))[,1]
+        num_customer = seg.share[i]*1000
+        profit_KB = profit_KB + num_customer*prob_temp_KB * (iter - uc)
+        #print("--")
+        #print(profit_KB)
+        prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster==i,]$price.KB),iter2,a,as.numeric(coef_est_10[i,2:5]))[,2]
+        profit_KR = profit_KR + num_customer*prob_temp_KR * (iter2 - uc)
+        #print("**")
+        #print(profit_KR)
+      }
+    profit_total  = profit_KB + profit_KR
+    #print("++")
+    #print(profit_total)
+    iter_row = append(iter_row, profit_total)
+    profit_total  = 0
+  }
+    profit_matrix[pricespace1_ind,] = iter_row
+    pricespace1_ind = pricespace1_ind + 1
+}
+
+max_profit_indices = which(profit_matrix == max(profit_matrix), arr.ind = TRUE)
+
+paste("After launch of KB and MB=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], "total max profit=", max(profit_matrix), " at KB=", pricespace1[max_profit_indices[1]], " and KR=", pricespace1[max_profit_indices[2]])
+
+#pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+#plot(pricespace4,profit_MB_q5,type='l',xlab='Prices',
+#     ylab='Profit',ylim=c(10,300),col="blue",lwd=2,
+#     cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+```
+
+
+```{r 5-3-3, echo=T, warning=F}
+# iter 3
+
+pricespace4 = seq(0.5,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],pricespace4,as.numeric(coef_est_10[i,2:5]))[,3]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB*(pricespace4 - uc)
+}
+
+paste("After launch of KB, with KB=", pricespace1[max_profit_indices[1]], " and KR=", pricespace1[max_profit_indices[2]], " profit of MB=", max(profit_MB_q5), " at price=", pricespace4[profit_MB_q5 == max(profit_MB_q5)])
+
+pricespace3 = seq(0.5,3,0.01)
+pricespace1 = seq(0.5,3,0.01)
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+profit_MB = 0
+profit_KB = 0
+
+
+profit_matrix = matrix(, nrow = length(pricespace1), ncol = length(pricespace2))
+pricespace1_ind = 1
+pricespace2_ind = 0
+
+for (iter in pricespace1){
+  iter_row = c()
+  for (iter2 in pricespace2){
+      profit_KR = 0
+      profit_KB = 0
+      a = pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+      for(i in (1:length(seg.share))){
+        w = seg.share[i]
+        prob_temp_KB = demand(iter,mean(kmeans_data[kmeans_data$cluster==i,]$price.KR),a,as.numeric(coef_est_10[i,2:5]))[,1]
+        num_customer = seg.share[i]*1000
+        profit_KB = profit_KB + num_customer*prob_temp_KB * (iter - uc)
+        #print("--")
+        #print(profit_KB)
+        prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster==i,]$price.KB),iter2,a,as.numeric(coef_est_10[i,2:5]))[,2]
+        profit_KR = profit_KR + num_customer*prob_temp_KR * (iter2 - uc)
+        #print("**")
+        #print(profit_KR)
+      }
+    profit_total  = profit_KB + profit_KR
+    #print("++")
+    #print(profit_total)
+    iter_row = append(iter_row, profit_total)
+    profit_total  = 0
+  }
+    profit_matrix[pricespace1_ind,] = iter_row
+    pricespace1_ind = pricespace1_ind + 1
+}
+
+max_profit_indices = which(profit_matrix == max(profit_matrix), arr.ind = TRUE)
+
+paste("After launch of KB and MB=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], "total max profit=", max(profit_matrix), " at KB=", pricespace1[max_profit_indices[1]], " and KR=", pricespace1[max_profit_indices[2]])
+
+#pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+#plot(pricespace4,profit_MB_q5,type='l',xlab='Prices',
+#     ylab='Profit',ylim=c(10,300),col="blue",lwd=2,
+#     cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+
+```
+
+
+
+```{r 5-3-4, echo=T, warning=F}
+# iter 4
+
+pricespace4 = seq(0.5,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand(pricespace1[max_profit_indices[1]],pricespace2[max_profit_indices[2]],pricespace4,as.numeric(coef_est_10[i,2:5]))[,3]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB*(pricespace4 - uc)
+}
+
+paste("After launch of KB, with KB=", pricespace1[max_profit_indices[1]], " and KR=", pricespace1[max_profit_indices[2]], " profit of MB=", max(profit_MB_q5), " at price=", pricespace4[profit_MB_q5 == max(profit_MB_q5)])
+
+pricespace3 = seq(0.5,3,0.01)
+pricespace1 = seq(0.5,3,0.01)
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+profit_MB = 0
+profit_KB = 0
+
+
+profit_matrix = matrix(, nrow = length(pricespace1), ncol = length(pricespace2))
+pricespace1_ind = 1
+pricespace2_ind = 0
+
+for (iter in pricespace1){
+  iter_row = c()
+  for (iter2 in pricespace2){
+      profit_KR = 0
+      profit_KB = 0
+      a = pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+      for(i in (1:length(seg.share))){
+        w = seg.share[i]
+        prob_temp_KB = demand(iter,mean(kmeans_data[kmeans_data$cluster==i,]$price.KR),a,as.numeric(coef_est_10[i,2:5]))[,1]
+        num_customer = seg.share[i]*1000
+        profit_KB = profit_KB + num_customer*prob_temp_KB * (iter - uc)
+        #print("--")
+        #print(profit_KB)
+        prob_temp_KR = demand(mean(kmeans_data[kmeans_data$cluster==i,]$price.KB),iter2,a,as.numeric(coef_est_10[i,2:5]))[,2]
+        profit_KR = profit_KR + num_customer*prob_temp_KR * (iter2 - uc)
+        #print("**")
+        #print(profit_KR)
+      }
+    profit_total  = profit_KB + profit_KR
+    #print("++")
+    #print(profit_total)
+    iter_row = append(iter_row, profit_total)
+    profit_total  = 0
+  }
+    profit_matrix[pricespace1_ind,] = iter_row
+    pricespace1_ind = pricespace1_ind + 1
+}
+
+max_profit_indices = which(profit_matrix == max(profit_matrix), arr.ind = TRUE)
+
+paste("After launch of KB and MB=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], "total max profit=", max(profit_matrix), " at KB=", pricespace1[max_profit_indices[1]], " and KR=", pricespace1[max_profit_indices[2]])
+
+#pricespace4[profit_MB_q5 == max(profit_MB_q5)]
+#plot(pricespace4,profit_MB_q5,type='l',xlab='Prices',
+#     ylab='Profit',ylim=c(10,300),col="blue",lwd=2,
+#     cex=2,cex.lab=1.5, cex.axis=1.5, cex.main=1.5, cex.sub=1.5)
+
+```
+
+
+```{r 5-3-5, echo=T, warning=F}
+paste("Init: MB=1.43 -->> KB=1.15, KR=1.19")
+paste("Iter-1: KB=1.15, KR=1.19 -->> MB=0.96")
+paste("Iter-1: MB=0.96 -->> KB=0.94, KR=0.96")
+paste("Iter-2: KB=0.94, KR=0.96 -->> MB=0.89")
+paste("Iter-2: MB=0.89 --> KB=0.92, KR=0.95")
+paste("Iter-3: KB=0.92, KR=0.95 --> MB=0.88")
+paste("Iter-3: MB=0.88 -->> KB=0.92, KB=0.95")
+paste("Iter-4: KB=0.92, KR=0.95 --> MB=0.88")
+paste("Iter-4: MB=0.88 -->> KB=0.92, KB=0.95")
+```
+
+\textbf{Thus we can see that after the launch of Kiwi Bubbles, the price of KB converges to \$0.92, KR converges to \$0.95 and MB converges to \$0.88.}\newline
+
+```{r 5-3-6, echo=T, warning=F}
+
+# Without launch of KB
+# Iter-1
+
+pricespace4 = seq(0.6,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand_q4(1.06,pricespace4,as.numeric(coef_est_10[i,2:5]))[,2]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB * (pricespace4 - uc)
+}
+
+paste("Without KB, in iter1, max profit by MB at KR=1.06 is ", max(profit_MB_q5), " at price ", pricespace4[profit_MB_q5 == max(profit_MB_q5)], sep="")
+```
+
+```{r 5-3-7, echo=T, warning=F}
+# adjusting kr prices according to the latest change in price of MB 
+# Iter-1
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_temp_KR = demand_q4(pricespace2,pricespace4[profit_MB_q5 == max(profit_MB_q5)],as.numeric(coef_est_10[i,2:5]))[,1]
+  num_customer = 1000 * w
+  profit_KR = profit_KR + num_customer*prob_temp_KR * (pricespace2 - uc)
+}
+
+paste("Without KB, in iter1, max profit by KR at MB=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], " is ", max(profit_KR), " at price ", pricespace2[profit_KR == max(profit_KR)], sep="")
+```
+
+```{r 5-3-8, echo=T, warning=F}
+
+# Iter-2
+
+pricespace4 = seq(0.6,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand_q4(pricespace2[profit_KR == max(profit_KR)],pricespace4,as.numeric(coef_est_10[i,2:5]))[,2]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB * (pricespace4 - uc)
+}
+
+paste("Without KB, in iter-2, max profit by MB at KR=", pricespace2[profit_KR == max(profit_KR)], " is ", max(profit_MB_q5), " at price ", pricespace4[profit_MB_q5 == max(profit_MB_q5)])
+
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_temp_KR = demand_q4(pricespace2,pricespace4[profit_MB_q5 == max(profit_MB_q5)],as.numeric(coef_est_10[i,2:5]))[,1]
+  num_customer = 1000 * w
+  profit_KR = profit_KR + num_customer*prob_temp_KR * (pricespace2 - uc)
+}
+
+paste("Without KB, in iter2, max profit by KR at MB=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], " is ", max(profit_KR), " at price ", pricespace2[profit_KR == max(profit_KR)], sep="")
+```
+
+```{r 5-3-8, echo=T, warning=F}
+
+# Iter-3
+
+pricespace4 = seq(0.6,3,0.01)
+profit_MB_q5 = 0
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_demand_MB = demand_q4(pricespace2[profit_KR == max(profit_KR)],pricespace4,as.numeric(coef_est_10[i,2:5]))[,2]
+  num_customer = seg.share[i]*1000
+  profit_MB_q5 = profit_MB_q5 + num_customer*prob_demand_MB * (pricespace4 - uc)
+}
+
+paste("Without KB, in iter-3, max profit by MB at KR=", pricespace2[profit_KR == max(profit_KR)], " is ", max(profit_MB_q5), " at price ", pricespace4[profit_MB_q5 == max(profit_MB_q5)])
+
+pricespace2 = seq(0.5,3,0.01)
+profit_KR = 0
+
+for(i in (1:length(seg.share))){
+  w = seg.share[i]
+  prob_temp_KR = demand_q4(pricespace2,pricespace4[profit_MB_q5 == max(profit_MB_q5)],as.numeric(coef_est_10[i,2:5]))[,1]
+  num_customer = 1000 * w
+  profit_KR = profit_KR + num_customer*prob_temp_KR * (pricespace2 - uc)
+}
+
+paste("Without KB, in iter3, max profit by KR at MB=", pricespace4[profit_MB_q5 == max(profit_MB_q5)], " is ", max(profit_KR), " at price ", pricespace2[profit_KR == max(profit_KR)], sep="")
+```
+
+```{r 5-3-5, echo=T, warning=F}
+paste("Iter-1: MB=1.43 -->> KR=1.06")
+paste("Iter-1: KR=1.06 -->> MB=0.98")
+paste("Iter-2: MB=0.98 -->> KR=0.98")
+paste("Iter-2: KR=0.98 -->> MB=0.96")
+paste("Iter-3: MB=0.96 -->> KR=0.98")
+paste("Iter-4: KR=0.98 -->> MB=0.96")
+paste("Iter-4: MB=0.96 -->> KR=0.98")
+```
+
+\textbf{Thus we can see that without the launch of Kiwi Bubbles, the price of KR converges to \$0.98 and MB converges to \$0.96.}\newline
+
+\textbf{4.4) At these prices, how does the strategic advantage of Kiwi Bubbles change from the one you derived in the previous section (if at all)?}\newline
+
+\textbf{Thus, comparing with and without launch of Kiwi Bubbles, the optimal price got reduced after the launch of Kiwi bubbles, while convergence occurred in both situations. Talking about our company particularly, our profit was close to \$306 with Kiwi Bubbles in the market, while it converged to $179 in case of no Kiwi Bubbles in the market.}\newline
+
+\textbf{Thus, it is highly recommended to launch Kiwi Bubbles to increase the company's profit share and cover larger consumer market distinguishly from it's existing product KR.}\newline
